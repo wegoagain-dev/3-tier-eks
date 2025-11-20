@@ -2,35 +2,27 @@ apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
   name: alb
-  annotations:
-    ingressclass.kubernetes.io/is-default-class: "false"
 spec:
   controller: ingress.k8s.aws/alb
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: 3-tier-app-ingress
+  name: three-tier-ingress
   namespace: 3-tier-app-eks
   annotations:
-    alb.ingress.kubernetes.io/scheme: "internet-facing"
-    alb.ingress.kubernetes.io/target-type: "ip"
-    # Health check for frontend (default)
-    alb.ingress.kubernetes.io/healthcheck-path: "/"
-    # Override health check specifically for backend service
-    alb.ingress.kubernetes.io/healthcheck-port: "traffic-port"
-    alb.ingress.kubernetes.io/healthcheck-protocol: "HTTP"
-    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
-    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
-    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/success-codes: "200"
-
+    # 1. Make the Load Balancer public
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # 2. Route traffic directly to Pod IPs (Faster & required for Fargate)
+    alb.ingress.kubernetes.io/target-type: ip
+    # 3. (Optional) Explicit health check path if your apps don't respond to '/'
+    # alb.ingress.kubernetes.io/healthcheck-path: /
 spec:
   ingressClassName: alb
   rules:
     - http:
         paths:
+          # Specific paths must come FIRST
           - path: /api
             pathType: Prefix
             backend:
@@ -38,6 +30,7 @@ spec:
                 name: backend
                 port:
                   number: 8000
+          # The "Catch-All" path comes LAST
           - path: /
             pathType: Prefix
             backend:

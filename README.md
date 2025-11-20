@@ -331,41 +331,23 @@ An **ExternalName** service in Kubernetes allows you to create a service that po
 
 Secrets are used to store sensitive information like database credentials, SSH keys while ConfigMaps are used to store non-sensitive configuration data. We will create a Kubernetes Secret for the RDS database credentials and a ConfigMap for the application configuration. Configmaps use `key-value` pairs to store non-sensitive data as environment variables, while secrets use `base64` encoding to store sensitive data.
 
-You'll need base64 encoding for the username, password and database url (enter one by one):
+Instead of making a secrets.yaml we will use kubectl create generic command to create the secret, it helps avoid errors and ensures consistency. It will automatically base64 encode the values.
 
 ```bash
-echo -n '<your-rds-username>' | base64
-echo -n '<your-rds-password>' | base64
-echo -n 'postgresql://<your-rds-username>:<your-rds-password>@postgres-db.3-tier-app-eks.svc.cluster.local:5432/postgres' | base64
+# Define your variables first or type them in the command
+# This creates the secret object directly in Kubernetes
+# leave DB_SECRET_KEY as default for now as this is a practice project
+kubectl create secret generic db-secrets \
+  --namespace 3-tier-app-eks \
+  --from-literal=DB_USERNAME='postgresadmin' \
+  --from-literal=DB_PASSWORD='your-secure-password' \
+  --from-literal=DB_SECRET_KEY='your-secret-key' \
+  --from-literal=DATABASE_URL='postgresql://<username>:<password>@<host>:<port>/postgres'
+# replace postgresurl with username,password,endpoint,port.
 ```
-change the `<your-rds-username>` and `<your-rds-password>` with your actual RDS username and password.
-
-![](/images/img-17.png)
-
-Now using the secret manifest edit the values with your base64 encoded values and apply the secret manifest:
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: rds-secret
-  namespace: 3-tier-app-eks
-type: Opaque
-data:
-  DB_USERNAME: <your-base64-encoded-username>
-  DB_PASSWORD: <your-base64-encoded-password>
-  DB_SECRET_KEY: ZGV2LXNlY3JldC1rZXk=
-  DATABASE_URL: <your-base64-encoded-database-url>
-```
-
 Keep secret key the same as in the backend app it defaults to `dev-secret-key` but you can change it to whatever you want. its better to generate a random secret key for production use, but for now lets leave as is.
 
-The database url is `postgresql://<your-rds-username>:<your-rds-password>@postgres-db.3-tier-app-eks.svc.cluster.local:5432/postgres` it encapsulates the username, password, host, port and database name. This is how the application will connect to the RDS database.
-
-
-Apply the secret manifest:
-```bash
-kubectl apply -f secrets.yaml
-```
+The database url is `postgresql://<your-rds-username>:<your-rds-password>@<endpoint>:5432/postgres` it encapsulates the username, password, host, port and database name. This is how the application will connect to the RDS database.
 
 Now we will create a ConfigMap for the application configuration. This will store non-sensitive data like the application host and port.
 
@@ -385,9 +367,7 @@ Apply the config manifest:
 ```bash
 kubectl apply -f configmap.yaml
 ```
-
-![](/images/img-17.png)
-![](/images/img-18.png)
+![](/images/img-14.png)
 
 ***Running database migrations***
 
@@ -397,18 +377,26 @@ What a job does is it creates a pod that runs the specified command and then exi
 
 This command `kubectl apply -f migration_job.yaml` will create a job that runs the command to apply the database migrations. This command will create the necessary tables and seed data in the RDS PostgreSQL database. Its worth analysing the job manifest to understand what it does and how it works. this is where the secrets and configmaps we created earlier will be used to connect to the database. its better than hardcoding the database credentials in the job manifest, because it allows you to change the credentials without modifying the job manifest.
 
-(modify the file to use your image)
+(dont forget to modify the file to use your own backend image)
+
+I actually got an error because my `migration_job.yaml` couldnt find DB_SECRET_KEY, however it was actually named SECRET_KEY
+![](/images/img-19.png)
+I debugged using `kubectl describe pod database-migration-kwsld -n 3-tier-app-eks`, get the database-migration-<name> through `kubectl get pods -n 3-tier-app-eks` \
+
+I deleted the secret we created above using `kubectl delete secret db-secrets -n 3-tier-app-eks` and the job using `kubectl delete job database-migration -n 3-tier-app-eks`.
+
+I ran the command above with SECRET_KEY instead, as thats whats stated in the `migration_job.yaml` file and then ran `kubectl apply -f migration_job.yaml`
 
 ```bash
 #run these one by one
 kubectl apply -f migration_job.yaml
 kubectl get job -A
 kubectl get pods -n 3-tier-app-eks
-#get the name of the pod created by the job
-kubectl logs <name-of-pod> -n 3-tier-app-eks
 ```
 
-![](/images/img-19.png)
+![](/images/img-16.png)
+
+Run `kubectl describe pod database-migration-<name> -n 3-tier-app-eks` and you should see it completed succesfully
 
 ### Backend and Frontend services
 Now lets deploy the backend and frontend services. The backend service is a Flask application that connects to the RDS PostgreSQL database, and the frontend service is a React application that communicates with the backend service.
@@ -424,10 +412,10 @@ kubectl apply -f frontend.yaml
 kubectl get deployment -n 3-tier-app-eks
 kubectl get svc -n 3-tier-app-eks
 ```
-![](/images/img-20.png)
+![](/images/img-17.png)
 
 ### Accessing the application
-At the minute we havent created ingress resources to expose the application to the internet. To access the application, we will port-forward the frontend service to our local machine. This will allow us to access the application using `localhost` and a specific port. Open two terminal windows, one for the backend service and one for the frontend service. In the first terminal window, run the following command to port-forward the backend service: We need to open new terminals because the port-forward command will block the terminal until you stop it with `CTRL+C`.
+At the minute we havent created ingress resources to expose the application to the internet. To access the application temporarily, we will port-forward the frontend and backend services to our local machine. This will allow us to access the application using `localhost` and a specific port. Open two terminal windows, one for the backend service and one for the frontend service. In the first terminal window, run the following command to port-forward the backend service: We need to open new terminals because the port-forward command will block the terminal until you stop it with `CTRL+C`.
 
 ```bash
 #port-forward the backend service to localhost:8000
@@ -435,14 +423,14 @@ kubectl port-forward svc/backend 8000:8000 -n 3-tier-app-eks
 #port-forward the frontend service to localhost:8080
 kubectl port-forward svc/frontend 8080:80 -n 3-tier-app-eks
 ```
-![](/images/img-21.png)
+![](/images/img-18.png)
 
 you can access the backend service at `http://localhost:8000/api/topics` in the browser or `curl http://localhost:8000/api/topics` in the terminal.
 
 you can access the frontend service at `http://localhost:8080` in the browser. The frontend service will communicate with the backend service to fetch data and display it.
 
-![](/images/img-22.png)
-![](/images/img-23.png)
+![](/images/img-19.png)
+![](/images/img-20.png)
 
 this is a devops quiz application that you can use. the seed data created some samples, in the manage questions you can add more questions and answers. the `3-tier-app-eks/backend/questions-answers` includes some csv files that you can use to import questions and answers into the application. You can also add your own questions and answers using the frontend interface.
 
@@ -450,65 +438,27 @@ this is a devops quiz application that you can use. the seed data created some s
 
 An ingress is a Kubernetes resource that manages external access to services in a cluster, typically via HTTP/HTTPS. It provides load balancing, SSL termination and name-based virtual hosting.
 
-The aws load balancer controller is a Kubernetes controller that manages AWS Elastic Load Balancers (ELBs) for Kubernetes services. It automatically provisions and configures ELBs based on the ingress resources defined in the cluster. This allows you to expose your services to the internet using a load balancer, without having to manually create and configure the ELB in AWS.
-
-***Why Set Up an OIDC Provider for EKS?***\
-OIDC has a "trust relationship" between your EKS cluster and AWS IAM. It tells AWS that your EKS cluster can issue tokens that AWS will trust for IAM role assumption.
-
-Without OIDC:
-
-    You'd have to put AWS access keys directly in your pods (insecure) or give every node excessive permissions.
-
-
-With IRSA + OIDC:
-
-    Each pod (via its service account) can assume an IAM role via a web identity token issued by Kubernetes.
-
-    AWS trusts that OIDC token because you’ve registered your cluster's OIDC provider with IAM.
-
-```bash
-export cluster_name=three-tier-react
-#this command will get the OIDC issuer ID for your EKS cluster
-oidc_id=$(aws eks describe-cluster --name $cluster_name \
---query "cluster.identity.oidc.issuer" --output text | cut -d '/' -f 5)
-
-echo $oidc_id
-
-# Check if IAM OIDC provider with your cluster's issuer ID
-aws iam list-open-id-connect-providers | grep $oidc_id | cut -d "/" -f4
-
-# If not, create an OIDC provider
-eksctl utils associate-iam-oidc-provider --cluster $cluster_name --approve
-```
-
-This creates the OIDC provider in IAM and associates it with your EKS cluster. This allows your cluster to issue tokens that AWS will trust for IAM role assumption.
-
-![](/images/img-24.png)
+We need to install the AWS Load Balancer Controller. This is a pod that runs in our cluster and 'listens' for Ingress resources. When it sees one, it automatically provisions an AWS ALB.
 
 ### Installing the AWS Load Balancer Controller using Helm
 Kubernetes Itself Doesn't Know About AWS Load Balancers\
 Kubernetes doesn’t natively know how to create AWS ALBs or NLBs. It only understands generic concepts like:`Service of type LoadBalancer` or `Ingress`\
 ```bash
 # install helm if haven't already
-brew install helm # (for mac, google for other platforms)
+brew install helm # (for mac, check for other platforms)
 
 # Add the EKS Helm chart repository. If you tried to install the AWS Load Balancer Controller manually, you'd need to apply dozens of YAML files in the correct order:
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update
 
-# what this does is it installs the AWS Load Balancer Controller in the kube-system namespace, using the service account we created earlier. It also sets the cluster name, VPC ID and region for the controller to use.
-# This allows the controller to manage load balancers in your cluster and automatically create them for your services. (It will create the CRDs automatically for you)
+# what this does is it installs the AWS Load Balancer Controller in the kube-system namespace,
+# This allows the controller to manage load balancers in your cluster and automatically create them for your services.
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
   -n kube-system \
-  --set clusterName=$cluster_name \
-  --set serviceAccount.create=false \
-  --set serviceAccount.name=aws-load-balancer-controller \
-  --set vpcId=$VPC_ID \
-  --set region=eu-west-2
+  --set clusterName=$CLUSTER_NAME \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=aws-load-balancer-controller
   ```
-
-Helm takes your `--set` parameters and automatically generates all the YAML files with your custom values filled in.
-Helm uses templates with placeholders that get filled with your values
 
 Helm is the package manager for Kubernetes. Think of it like:
 **apt** or **yum** for Linux, or **pip** for Python.\
@@ -534,69 +484,45 @@ aws-load-balancer-controller/
 └── README.md                     # Installation docs
 ```
 
-![](/images/img-26.png)
+![](/images/img-21.png)
 
 
-### Creating an Ingress class for alb and an Ingress resource to access the frontend service
+### Ingress class for alb and an Ingress resource to access the frontend service
 
-Before creating the Ingress, you need to tag your public subnets so the AWS Load Balancer Controller knows where to deploy the ALB.\
-Why this is needed: The AWS Load Balancer Controller uses specific tags to automatically discover which subnets to use for load balancers.\
-You can do this in the AWS console or using the AWS CLI.
+Now to apply the ingress manifest using `kubectl apply -f ingress.yaml`.
 
-List the public subnet for the EKS cluster, and apply the tag
-```bash
-# reuse the VPC ID for the EKS cluster
-# Public subnets for the cluster
-aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=true" \
---query "Subnets[*].{SubnetId:SubnetId,AvailabilityZone:AvailabilityZone,PublicIp:MapPublicIpOnLaunch}"
+The Ingress Class is the link that tells Kubernetes who should execute your orders. It identifies the specific Ingress Controller (the software) that should manage this Ingress. By setting `ingressClassName: alb`, you are explicitly saying: "This set of rules is for the AWS Load Balancer Controller. Please provision an ALB for me."
 
-# Get the list of subnets id's from above commands and run this
-# Update the correct subnet id's
-aws ec2 create-tags --resources subnet-085ba3c4a15325db0 subnet-03b3b39ebfc0ac176 \
-subnet-028baa71861e4b8aa --tags Key=kubernetes.io/role/elb,Value=1
+The Ingress resource is just a configuration file. It defines what you want to happen, but it doesn't actually do anything itself. It simply lists routing rules.
 
-# Verify the tags
-aws ec2 describe-subnets --subnet-ids subnet-085ba3c4a15325db0 subnet-03b3b39ebfc0ac176 \
-subnet-028baa71861e4b8aa --query "Subnets[*].{SubnetId:SubnetId,Tags:Tags}"
-```
-![](/images/img-27.png)
-
-Now apply the ingress manifest using `kubectl apply -f ingress.yaml`. To create the ingress class and ingress resource. The ingress class is used to specify which ingress controller to use for the ingress resource. In this case, we are using the AWS Load Balancer Controller as the ingress controller.
+If a user goes to my-app.com/api, send them to the backend service.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
   name: alb
-  annotations:
-    ingressclass.kubernetes.io/is-default-class: "false"
 spec:
   controller: ingress.k8s.aws/alb
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: 3-tier-app-ingress
+  name: three-tier-ingress
   namespace: 3-tier-app-eks
   annotations:
-    alb.ingress.kubernetes.io/scheme: "internet-facing"
-    alb.ingress.kubernetes.io/target-type: "ip"
-    # Health check for frontend (default)
-    alb.ingress.kubernetes.io/healthcheck-path: "/"
-    # Override health check specifically for backend service
-    alb.ingress.kubernetes.io/healthcheck-port: "traffic-port"
-    alb.ingress.kubernetes.io/healthcheck-protocol: "HTTP"
-    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
-    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
-    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/success-codes: "200"
-
+    # 1. Make the Load Balancer public
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # 2. Route traffic directly to Pod IPs (Faster & required for Fargate)
+    alb.ingress.kubernetes.io/target-type: ip
+    # 3. (Optional) Explicit health check path if your apps don't respond to '/'
+    # alb.ingress.kubernetes.io/healthcheck-path: /
 spec:
   ingressClassName: alb
   rules:
     - http:
         paths:
+          # Specific paths must come FIRST
           - path: /api
             pathType: Prefix
             backend:
@@ -604,6 +530,7 @@ spec:
                 name: backend
                 port:
                   number: 8000
+          # The "Catch-All" path comes LAST
           - path: /
             pathType: Prefix
             backend:
@@ -617,28 +544,23 @@ spec:
 kubectl get ingress -n 3-tier-app-eks
 kubectl describe ingress 3-tier-app-ingress -n 3-tier-app-eks
 
-# After ingress creation
+# After ingress creation if you have issues you can check the logs
 kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
 ```
+![](/images/img-22.png)
 
+It may take a few minutes for the ALB to be provisioned and the DNS name to be available. Once it is available, you can access it by copying the DNS name from the ingress command and pasting it in the browser.
 
-![](/images/img-28.png)
-
-
-It may take a few minutes for the ALB to be provisioned and the DNS name to be available. Once it is available, you can access the application using the DNS name of the ALB in aws by searching loadbalancer, click the loadbalancer created and copy the DNS and paste it in the browser.
-
-![](/images/img-29.png)
-
-
+***CHECK OUT THE VIDEO IN THE REPOSITORY FOR A DEMO***
 
 ### Whats Next and how can we improve?
-In this project, we have successfully deployed a three-tier application on AWS EKS using Kubernetes. We have used Docker to containerise the application implementing , and Github Actions and ECR to push the images to the ECR repository for Continuous Integration, Kubernetes to orchestrate the deployment, and AWS services like RDS for the database and ALB for load balancing.
+In this project, we have successfully deployed a three-tier application on AWS EKS using Kubernetes. We have used Docker to containerisethe application and Github Actions and ECR to push the images to the ECR repository for Continuous Integration, Kubernetes to orchestrate the deployment, and AWS services like RDS for the database and ALB for load balancing.
 
-The next future steps will be to implement monitoring and logging for the application using tools like Prometheus, Grafana. This will help us monitor the application's performance and troubleshoot any issues that may arise.
+The next steps will be to implement monitoring and logging for the application using tools like Prometheus, Grafana. This will help us monitor the application's performance and troubleshoot any issues that may arise.
 
 Another future step will be to implement CI/'CD' for the application. This will allow us to automate the deployment process and ensure that the application is always up-to-date with the latest changes.
 
-We will also use route53 to create a custom domain for the application and point it to the ALB. This will allow us to access the application using a custom domain name instead of the ALB DNS name.
+We will also use Route53 to create a custom domain for the application and point it to the ALB. This will allow us to access the application using a custom domain name instead of the ALB DNS name.
 
 
 ### To delete the cluster and all resources created
@@ -646,18 +568,18 @@ To delete the RDS instance, you can use the following command:
 ```bash
 #can take a while to delete
 aws rds delete-db-instance \
---db-instance-identifier three-tier-react-db \
+--db-instance-identifier $DB_NAME \
 --skip-final-snapshot \
---region eu-west-2
+--region $REGION
 
 aws rds delete-db-subnet-group \
-  --db-subnet-group-name three-tier-react-db-subnet-group \
-  --region eu-west-2
+  --db-subnet-group-name $DB_SUBNET_GROUP_NAME \
+  --region $REGION
 ```
 
 To delete the EKS cluster and all resources created, you can use the following command:
 ```bash
-eksctl delete cluster three-tier-react --region eu-west-2
+eksctl delete cluster $CLUSTER_NAME --region $REGION
 ```
 This will delete the EKS cluster, the VPC, the RDS instance, and all other resources created during the setup. Make sure to back up any data you want to keep before running this command, as it will permanently delete all resources associated with the cluster.
 
