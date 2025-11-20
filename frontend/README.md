@@ -10,7 +10,7 @@ npm start
 # To create a production build
  npm run build
 
- # DevOps Learning Platform - Frontend
+# DevOps Learning Platform - Frontend
 
 A React-based frontend for the DevOps Learning Platform. This application provides an interactive interface for learning DevOps concepts and taking quizzes.
 

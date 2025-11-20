@@ -270,26 +270,25 @@ Now do a git commit and push your changes to the main branch and tests should ru
 ```bash
 git add .
 git commit -m "Added CI pipeline"
-git push origin main
+git push
 ```
-
+![](/images/img-11.png)
 ---
 
 ## Kubernetes deployment
 Everything we will be deploying is in the k8s folder in the repository. ( I recommend understanding the files and how they work)
 
 ### Namespace
-***The first thing we will be doing is creating the Kubernetes namespace, we need this to isolate group of resources within a cluster. It gives you a virtual cluster for you to work within, usually needed when working in teams helps avoid conflicts and manage resources more efficiently.***
+***The first thing we will be doing is creating the Kubernetes namespace, we do this to isolate group of resources within a cluster. It gives you a virtual cluster for you to work within, usually needed when working in teams helps avoid conflicts and manage resources more efficiently.***
 
-`kubectl apply -f namespace.yaml` will create the namespace named ***three-tier-app-eks*** for the application. if you do `kubectl get namespaces` you should see the namespace created, if you dont it'll be created in the default namespace.
+ensure youre in the k8s folder and do `kubectl apply -f namespace.yaml` will create the namespace named ***three-tier-app-eks*** for the application. if you do `kubectl get namespaces` you should see the namespace created.
 
-![](/images/img-14.png)
+![](/images/img-12.png)
 
 ### RDS service
 ***Time to create a service for our RDS instance***
 
- Add your RDS endpoint in the `externalName` field. You can find your RDS endpoint in the AWS console in the one we created under the RDS instance details. Then apply the service manifest: `kubectl apply -f database-service.yaml`
-
+ Modify the database-service.yaml file and enter your RDS endpoint in the `externalName` field. You can find your RDS endpoint in the AWS console in the one we created under the RDS instance details. Then apply the service manifest: `kubectl apply -f database-service.yaml`
 
 ```yaml
 apiVersion: v1
