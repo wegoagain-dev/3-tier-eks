@@ -4,11 +4,13 @@
 ![arch](/images/three-tier-eks.jpeg)
 
 ## 🧠 About the Project
-In this project, we will deploy a three-tier application on AWS EKS (Elastic Kubernetes Service). The application consists of a React frontend, Flask backend and a RDS PostgreSQL database. We will use Docker to containerize the application, Github Actions and ECR to implement CI and Kubernetes to orchestrate the deployment on EKS.
+In this project, we will deploy a three-tier application on AWS EKS (Elastic Kubernetes Service). The application consists of a React frontend, Flask backend and a RDS PostgreSQL database. We will use Docker to containerise the application, Github Actions and ECR to implement CI/CD and Kubernetes to orchestrate the deployment on EKS.
 
-To make the application publicly accessible, I'll implement an AWS load balancer controller which will provision an ALB (Application Load Balancer) through Kubernetes ingress resources. In addition Kubernetes secrets will be used to store sensitive information such as database credentials and ConfigMap will be used to store non-sensitive configuration data.
+To make the application publicly accessible, I'll implement an AWS load balancer controller which will provision an ALB (Application Load Balancer) through Kubernetes ingress resources. 
 
-Before deploying the backend service, I'll run database migrations using a Kubernetes Job, ensuring the schema is properly initialized. To simplify database connectivity, I'll utilize an External Service for the RDS instance, leveraging Kubernetes' DNS-based service discovery to maintain clean application configuration.
+In addition Kubernetes secrets will be used to store sensitive information such as database credentials and ConfigMap will be used to store non-sensitive configuration data.
+
+Before deploying the backend service, I'll run a database migration using a Kubernetes Job, ensuring the schema is properly initialized. To simplify database connectivity, I'll utilize an External Service for the RDS instance, leveraging Kubernetes' DNS-based service discovery to maintain clean application configuration.
 
 ***(note: EKS charges .10p/hour so ensure it's deleted when you complete project) I'VE WARNED YOU :D***
 
@@ -24,220 +26,235 @@ In EKS, youre provided with 3 options on how to run your workloads:
 We will keep it simple and use ***Managed Node Groups*** with `eksctl` for this project, as it provides a good balance between ease of use and control over the underlying infrastructure.
 
 ## Prerequisites
-I'll assume you have basic knowledge of Docker, Kubernetes, and AWS services. you will need to install ***eksctl, aws cli, kubectl, helm and docker*** on your local machine.
+I'll assume you have basic knowledge of Docker, Kubernetes, and AWS services.\ 
+You will need to install ***eksctl, aws cli, kubectl, helm and docker*** on your local machine.
 
 You will also need an AWS account with the necessary permissions to create EKS clusters, EC2 instances, and other resources.
-
 
 ## 🚀 Getting Started
 
 > ⚠️ **NOTE**: For each section I will actually recommend reseraching each command you input to understand what it does and why its needed. This will help you understand the process better and make it easier to troubleshoot any issues that may arise. Use documentation then AI as long as you understand what its doing and why its needed.
 
-Lets start by setting up the EKS cluster and deploying the application. To create the EKS cluster, we will use `eksctl`, a command-line tool that simplifies the process of creating and managing EKS clusters. (Remember to configure your AWS CLI with your credentials and region before running the commands and ensure you have the necessary permissions to create EKS clusters and other resources in your AWS account.)
+> ⚠️ **NOTE** (Remember to configure your AWS CLI, you can clone the repo and any files modify to suit your needs)
 
-```bash
-# Eksctl command to build an EKS cluster with a managed node group
-# with 2 nodes(min:1, max: 3 nodes as autoscaling)
-eksctl create cluster \
-  --name three-tier-react \
-  --region eu-west-2 \
-  --version 1.31 \
-  --nodegroup-name standard-workers \
-  --node-type t3.medium \
-  --nodes 2 \
-  --nodes-min 1 \
-  --nodes-max 3 \
-  --managed
+Lets start by setting up the EKS cluster and deploying the application. To create the EKS cluster, we will use `eksctl`, a command-line tool that simplifies the process of creating and managing EKS clusters.
+
+We will use a `cluster-config.yaml` file to define the cluster configuration. It makes a reusable template for the cluster configuration.
+
+run `eksctl create cluster -f cluster-config.yaml` in terminal.
+
+```yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: three-tier
+  region: eu-west-2
+  version: "1.31"
+
+managedNodeGroups:
+  - name: standard-workers
+    instanceType: t3.medium
+    minSize: 1
+    maxSize: 3
+    desiredCapacity: 2
+    # This automatically adds the necessary IAM policies to be attached to the nodes
+    iam:
+      withAddonPolicies:
+        imageBuilder: true
+        albIngress: true 
+        cloudWatch: true
 ```
-![EKS Cluster Nodes](/images/img-1.png)
+![](/images/img-1.png)
 
 A cloud formation stack is what runs in the backend to configure these resources.\
-This `eksctl` command creates an Amazon EKS (Elastic Kubernetes Service) cluster in AWS with the following specifications:
 
-**Cluster Details:**
-- **Name**: `three-tier-react`
-- **Region**: `eu-west-2` (Europe - London)
-- **Kubernetes Version**: `1.31`
+The `iam` block is a shortcut in `eksctl`. It automatically attaches extra AWS permissions (IAM Policies) to your Worker Nodes (the EC2 instances running your pods).\
+`albIngress: true` - It attaches the IAM policy required by the AWS Load Balancer Controller directly to your worker nodes. (It helps manually attaching IAM role, setting up OIDC, needing to create Kubernetes service account).\
+`cloudWatch: true` - It attaches the CloudWatchAgentServerPolicy to your nodes.\
+`imageBuilder: true` - It attaches the Full Access policy for ECR (AmazonEC2ContainerRegistryFullAccess) to your nodes.
 
-**Node Group Configuration:**
-- **Node Group Name**: `standard-workers`
-- **Instance Type**: `t3.medium` (2 vCPUs, 4GB RAM)
-- **Initial Node Count**: 2 nodes
-- **Minimum Nodes**: 1 (for auto-scaling)
-- **Maximum Nodes**: 3 (for auto-scaling)
-- **Managed**: Uses AWS-managed node groups (AWS handles node provisioning, updates, and lifecycle management)
+It can take 10-20 minutes to create the cluster, so be patient.
 
-**What Gets Created:**
-- An EKS control plane (master nodes managed by AWS)
-- A VPC with public and private subnets across multiple availability zones
-- An Internet Gateway and NAT Gateways for networking
-- Security groups with appropriate rules
-- IAM roles and policies for the cluster and nodes
-- A managed node group with 2 t3.medium EC2 instances
-- Auto Scaling Group configured to scale between 1-3 nodes
-- Integration with AWS Load Balancer Controller and other AWS services
-
-The `--managed` flag means AWS will automatically handle node updates, security patches, and replacement of unhealthy nodes. This is typically the recommended approach for production workloads as it reduces operational overhead.
-
-It can take 10-20 minutes to create the cluster, so be patient. Once the cluster is created, you can verify it by running:
-
+Once the cluster is created, you can verify it by running:
 ```bash
 # Check the status of the EKS cluster
-aws eks list-clusters --region eu-west-2
+aws eks list-clusters
 ```
-Now to access the cluster, we need to check if we are connected to the kubeconfig file. This allows `kubectl` to communicate with the EKS cluster.
-```bash
-# Get the current context
-kubectl config current-context
-```
-If not run:
-
-```bash
-# Update kubeconfig to use the new EKS cluster
-aws eks update-kubeconfig --name <cluster-name> --region eu-west-2
-# Get the current context
-kubectl config current-context
-```
-![EKS Cluster Nodes](/images/img-2.png)
-
-Now run these commands to ensure you can see the nodes in your cluster:
-
+kubectl command should be automatically configured by eksctl.
+run these commands to ensure you can see the nodes in your cluster:
 ```bash
 # Check the nodes in the cluster
 kubectl get namespaces #list all namespaces
-kubectl get node #list all nodes
-kubectl get pod -A #list all pods in all namespaces
+kubectl get nodes #list all nodes
+kubectl get pods -A #list all pods in all namespaces
 kubectl get services -A #list all services in all namespaces
 ```
-
-![EKS Cluster Nodes](/images/img-3.png)
+![](/images/img-2.png)
 
 Hopefully should all be up and running.
 
 For this project we are using a React frontend, a Flask backend that connects to a PostgreSQL database.
 
-### Creating RDS PostgreSQL Database
+### Creating PostgreSQL RDS Database
 The PostgreSQL RDS instance will be in the same VPC as the EKS cluster, allowing the application to connect to it securely. EKS created private subnets for the cluster, so we will use those subnets to deploy the RDS instance.
 
-You can directly check for VPC ID and Private Subnet IDs in the AWS console or use the following command: (this will be used later to create a subnet group for the RDS instance)
+Lets set some variables to create our RDS instance in terminal
 
 ```bash
-# Get the VPC ID and Private Subnet IDs for the EKS cluster (stores VPC ID in VPC_ID variable)
+#customise these how you want
+CLUSTER_NAME="three-tier"
+REGION="eu-west-2"
+DB_NAME="threetierreactdb"
+DB_SUBNET_GROUP_NAME="three-tier-subnet-group"
+
+# Lets also securely store the DB password (after command: enter password)
+read -s DB_PASSWORD
+
+#Lets get network details automatically
+# Get the VPC ID for the EKS cluster
 VPC_ID=$(aws eks describe-cluster \
-  --name three-tier-react \
-  --region eu-west-2 \
+  --name $CLUSTER_NAME \
+  --region $REGION \
   --query "cluster.resourcesVpcConfig.vpcId" \
   --output text)
-# Get the Private Subnet IDs for the EKS cluster
-aws ec2 describe-subnets \
-  --filters "Name=vpc-id,Values=$VPC_ID" \
-  --query "Subnets[?MapPublicIpOnLaunch==\`false\`].SubnetId" \
-  --region eu-west-2 \
-  --output text
 
-# create a subnet group for the RDS instance (replace the subnet IDs with your own)
+# Get the Private Subnet IDs for the EKS cluster (eksctl tags private subnets with 'InternalELB')
+SUBNET_IDS=$(aws ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  "Name=tag:kubernetes.io/role/internal-elb,Values=1" \
+  --query "Subnets[].SubnetId" \
+  --region $REGION \
+  --output text)
+
+# create a subnet group for the RDS instance
+# (I had an issue with extracting the subnet IDs so i had to manually entered them)
 aws rds create-db-subnet-group \
-  --db-subnet-group-name three-tier-react-db-subnet-group \
-  --db-subnet-group-description "Subnet group for three-tier-react RDS instance" \
-  --subnet-ids <your-subnet-id> <your-subnet-id> <your-subnet-id> \
-  --region eu-west-2
+  --db-subnet-group-name $DB_SUBNET_GROUP_NAME \
+  --db-subnet-group-description "Subnet group for three-tier RDS instance" \
+  --subnet-ids $SUBNET_IDS \  # if you get an error manually enter the subnet ids from echo "$SUBNET_IDS"
+  --region $REGION
 ```
-![](/images/img-4.png)
+![](/images/img-3.png)
 
 Lets create a security group for the RDS instance. This security group will allow inbound traffic from the EKS cluster's worker nodes on the PostgreSQL port (5432).
 
 ```bash
-# Create a security group for the RDS instance
-aws ec2 create-security-group \
-  --group-name three-tier-react-rds-security-group \
-  --description "Security group for RDS instance three-tier-react" \
-  --vpc-id $VPC_ID \
-  --region eu-west-2
-```
-![](/images/img-5.png)
-
-Now the security group is created, we need to allow inbound traffic from the EKS cluster's worker nodes on the PostgreSQL port (5432).
-```bash
-# Get the security group ID of rds-security-group
-RDS_SG_ID=$(aws ec2 describe-security-groups \
-  --filters "Name=group-name,Values=three-tier-react-rds-security-group" "Name=vpc-id,Values=$VPC_ID" \
+# Get the Security Group ID of the EKS Nodes (This is where your app runs)
+# eksctl creates a shared SG for all nodes, we need to allow this one.
+EKS_NODE_SG_ID=$(aws ec2 describe-security-groups \
+  --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:aws:eks:cluster-name,Values=$CLUSTER_NAME" \
   --query "SecurityGroups[0].GroupId" \
-  --output text \
-  --region eu-west-2)
-# Get the security group ID of the EKS cluster's worker nodes
-EKS_SG_ID=$(aws eks describe-cluster \
-  --name three-tier-react \
-  --region eu-west-2 \
-  --query "cluster.resourcesVpcConfig.securityGroupIds[0]" \
+  --region $REGION \
   --output text)
-# Allow inbound traffic from the EKS cluster's worker nodes on the PostgreSQL port (5432)
+# Create a security group for the RDS instance to allow inbound traffic from the EKS cluster's worker nodes on the PostgreSQL port (5432).
+RDS_SG_ID=$(aws ec2 create-security-group \
+  --group-name "rds-security-group" \
+  --description "Security group for RDS instance three-tier" \
+  --vpc-id $VPC_ID \
+  --region $REGION \
+  --query "GroupId" \
+  --output text)
+  
+# Allow traffic ONLY from the EKS Node Group on port 5432
 aws ec2 authorize-security-group-ingress \
   --group-id $RDS_SG_ID \
   --protocol tcp \
   --port 5432 \
-  --source-group $EKS_SG_ID \
-  --region eu-west-2
+  --source-group $EKS_NODE_SG_ID \
+  --region $REGION
 ```
+![](/images/img-4.png)
 
-![](/images/img-6.png)
-
-Now to create the RDS instance, we will use the `aws rds create-db-instance` command. This command will create a PostgreSQL database instance in the VPC and private subnets we created earlier. (change the password to your own, also the subnet group name)
+Now to create the RDS instance, we will use the `aws rds create-db-instance` command. This command will create a PostgreSQL database instance in the VPC and private subnets with the security group we created earlier.
 
 ```bash
 aws rds create-db-instance \
-  --db-instance-identifier three-tier-react-db \
+  --db-instance-identifier $DB_NAME \
   --db-instance-class db.t3.micro \
   --engine postgres \
   --engine-version 15 \
   --master-username postgresadmin \
-  --master-user-password <makethisyourpassword> \
+  --master-user-password $DB_PASSWORD \
   --allocated-storage 20 \
   --vpc-security-group-ids $RDS_SG_ID \
-  --db-subnet-group-name three-tier-react-db-subnet-group \
+  --db-subnet-group-name $DB_SUBNET_GROUP_NAME \
   --no-publicly-accessible \
   --backup-retention-period 7 \
   --multi-az \
   --storage-type gp2 \
-  --region eu-west-2
+  --region $REGION
 ```
-Change both `--master-username` from admin and the `--master-user-password` to a secure password of your choice. \
 For security: Storing secrets like the DB password in AWS Secrets Manager or a Kubernetes Secret instead of hardcoding them would be recommended.
 
-![](/images/img-7.png)
+![](/images/img-5.png)
 
 It may take a while but you will see it getting created, go to AWS RDS Console and check the status of the DB instance.
-![](/images/img-8.png)
+![](/images/img-6.png)
 
 ---
 
-***Now its time to create our three-tier application. As you can see the frontend and backend are in this repository. I will be implementing CI using GitHub Actions and ECR so the image can be hosted on AWS***
+***Now its time to create our three-tier application. As you can see the frontend and backend are in this repository. I will be implementing CI/CD using GitHub Actions and ECR so the image can be hosted on AWS***
 
 You can clone this repository to get the code for the application:
 ```bash
-git clone https://github.com/wegoagain00/3-tier-eks.git
+git clone https://github.com/wegoagain-dev/3-tier-eks.git
 ```
 
 Before we begin lets set up OIDC for the connection between our AWS and GitHub Actions. This allows our GitHub Actions workflow to authenticate with AWS using short-lived tokens, completely removing the need to store any AWS keys in GitHub secrets.
 
-1. Go to IAM -> Identity providers and add a new provider.
-2. Choose OpenID Connect as option.
-3. For the "Provider URL", use `https://token.actions.githubusercontent.com`.
-4. For the "Audience", use `sts.amazonaws.com`.
-5. Go to the Identity provider and select 'Assign Role', then 'Create an IAM Role', select 'web identity', on audience use `sts.amazonaws.com`. On Github organisation enter your github username, also on Github repository enter the name of the repository, also git branch on `main` then press next.
-6. On permissions attach the `AmazonEC2ContainerRegistryPowerUser`, to allow it to push images to ECR. Press next.
-7. Give the role a name like "GitHubActionsECR". and then create the role
+### 1. Create the OIDC Provider for GitHub (If it doesn't exist)
+### AWS creates this once per account, but it's good to check.
+```bash
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com \
+  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+```
+### 2. Create the Trust Policy (The "Rules" for who can enter)
+### This ensures ONLY the specific repo can use this role.
+get your $AWS_ACCOUNT_ID using `AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)`\
+dont forget to change the repo name to match your own
+```bash
+cat > trust-policy.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:wegoagain-dev/3-tier-eks:*"
+        }
+      }
+    }
+  ]
+}
+EOF
+```
+### 3. Create the Role and Attach Permissions
+```bash
+aws iam create-role --role-name GitHubActionsECR --assume-role-policy-document file://trust-policy.json
 
-![](/images/img-9.png)
-![](/images/img-10.png)
-![](/images/img-11.png)
+aws iam attach-role-policy --role-name GitHubActionsECR --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+```
+![](/images/img-7.png)
+![](/images/img-8.png)
 
 Now we have the permissions we will need to create the ECR repository for these images to be pushed to.
-1. Go to ECR on AWS console and create a new repository for each image we will be pushing to ECR.
+1. Go to ECR on AWS console and create a new frontend repository we will be pushing to ECR.
 
-![](/images/img-12.png)
+![](/images/img-9.png)
 
-2. Do the same for the backend image.
-![](/images/img-13.png)
+2. Do the same for the backend repository.
+![](/images/img-10.png)
 
 Now this repository will have it but we will create this following folder `.github/workflows/ci.yml`. This will contain the CI pipeline for the application. It will push our images to the ECR.
 
@@ -250,7 +267,7 @@ arn:aws:iam::123456789012:role/YourRoleName.
 
 Now do a git commit and push your changes to the main branch and tests should run successfully and images should show on ECR.
 
-```
+```bash
 git add .
 git commit -m "Added CI pipeline"
 git push origin main
@@ -480,69 +497,10 @@ This creates the OIDC provider in IAM and associates it with your EKS cluster. T
 
 ![](/images/img-24.png)
 
-### Create IAM Policy for AWS Load Balancer Controller
-This command will create the IAM policy needed for the AWS Load Balancer Controller. The AWS Load Balancer Controller is allowed to create/modify/delete load balancers, target groups, security groups, etc.
-```bash
-curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.11.0/docs/install/iam_policy.json
-aws iam create-policy \
-    --policy-name AWSLoadBalancerControllerIAMPolicy \
-    --policy-document file://iam_policy.json
-```
-
-Create service account in Kubernetes with the policy attached. this is where the IRSA (IAM Roles for Service Accounts) comes into play.\
-This creates a bridge between Kubernetes and AWS:\
-Kubernetes side: A service account that pods can use.\
-AWS side: An IAM role with load balancer permissions\
-Connection: The OIDC provider links them together
-
-```bash
-# Use the account id for your account
-eksctl create iamserviceaccount \
-  --cluster=$cluster_name \
-  --namespace=kube-system \
-  --name=aws-load-balancer-controller \
-  --role-name AmazonEKSLoadBalancerControllerRole \
-  --attach-policy-arn=arn:aws:iam::373317459404:policy/AWSLoadBalancerControllerIAMPolicy \
-  --approve
-#get your own arn from the json command above or check the AWS console in policies
-# verify its creation
-kubectl get serviceaccount -n kube-system | grep -i aws-load-balancer-controller
-```
-
-![](/images/img-25.png)
-
-
-***Example Use Case | AWS Load Balancer Controller***
-
-Let’s say your EKS cluster needs to automatically create and manage Application Load Balancers (ALBs) for your Kubernetes Ingress resources. With IRSA + OIDC:
-
-    ✅ You create an IAM policy with permissions for managing load balancers (like ALBs, target groups, security groups).
-
-    ✅ You attach that policy to an IAM role.
-
-    ✅ You map that IAM role to a Kubernetes service account (e.g., aws-load-balancer-controller in kube-system).
-
-    ✅ When the controller pod runs, it uses this service account, and AWS trusts the OIDC token from the pod to allow it to assume the IAM role.
-
-    ✅ The controller can now securely call AWS APIs (like creating ALBs) without any static credentials or node-level IAM access.
-
-
 ### Installing the AWS Load Balancer Controller using Helm
-What are CRDs? \
-Kubernetes comes with built-in resources like `Pod`, `Service`, `Deployment`. But it doesn't know about AWS-specific things like `TargetGroupBinding` or advanced `Ingress` features.
-
-CRDs teach Kubernetes about these new resource types. These aren't built into Kubernetes.\
-They're defined by AWS’s controller and only make sense in the AWS context.\
 Kubernetes Itself Doesn't Know About AWS Load Balancers\
 Kubernetes doesn’t natively know how to create AWS ALBs or NLBs. It only understands generic concepts like:`Service of type LoadBalancer` or `Ingress`\
-But to translate those into actual AWS resources, you need something like:
-`AWS Load Balancer Controller (for ALBs and NLBs)`
 ```bash
-# this will install the CRDs needed for the controller
-# CRDs are Custom Resource Definitions, they allow you to extend Kubernetes with your own resources, in this case, the AWS Load Balancer Controller uses CRDs to define resources like TargetGroupBinding, Ingress, etc.
-kubectl apply -k  \
-"github.com/aws/eks-charts/stable/aws-load-balancer-controller/crds?ref=master"
-
 # install helm if haven't already
 brew install helm # (for mac, google for other platforms)
 
@@ -551,7 +509,7 @@ helm repo add eks https://aws.github.io/eks-charts
 helm repo update
 
 # what this does is it installs the AWS Load Balancer Controller in the kube-system namespace, using the service account we created earlier. It also sets the cluster name, VPC ID and region for the controller to use.
-# This allows the controller to manage load balancers in your cluster and automatically create them for your services.
+# This allows the controller to manage load balancers in your cluster and automatically create them for your services. (It will create the CRDs automatically for you)
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
   -n kube-system \
   --set clusterName=$cluster_name \
