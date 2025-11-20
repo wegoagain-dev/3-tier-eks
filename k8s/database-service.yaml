@@ -7,6 +7,6 @@ metadata:
     service: database
 spec:
   type: ExternalName
-  externalName: three-tier-react-db.cto44ogqocij.eu-west-2.rds.amazonaws.com
+  externalName: threetierreactdb.cto44ogqocij.eu-west-2.rds.amazonaws.com
   ports:
     - port: 5432

@@ -317,16 +317,7 @@ psql -h postgres-db -p 5432 -U postgresadmin -d postgres
 ```
 Itll ask for the password, enter the password you set when creating the RDS instance. If you see a prompt like `postgres=#`, then you have successfully connected to the RDS instance. Dont forget to exit the pod when done by typing `exit` and then `exit` again.
 
-To delete the temporary pod, run:
-
-```bash
-kubectl delete pod pg-client --namespace=3-tier-app-eks
-```
-I had an issue where I couldn't connect to the RDS instance from the pod. I had to add the RDSsecurity group rule to allow PSQL traffic from anywhere. (This isnt best practice but it was to test out the connection)
-
-![](/images/img-15.png)
-![](/images/img-16.png)
-
+![](/images/img-13.png)
 
 ### ExternalName Service Pattern
 An **ExternalName** service in Kubernetes allows you to create a service that points to an external resource, such as an AWS RDS instance. This is useful for integrating external databases or services into your Kubernetes applications without needing to manage the lifecycle of those resources within Kubernetes.
@@ -335,8 +326,6 @@ An **ExternalName** service in Kubernetes allows you to create a service that po
 - **Flexibility**: Easy to switch between different RDS endpoints
 - **Abstraction**: Decouples application from specific database endpoints
 - **Environment Consistency**: Same service name across dev/staging/prod
-
-
 
 ### Creating Kubernetes Secrets and configmaps with rds db details
 
