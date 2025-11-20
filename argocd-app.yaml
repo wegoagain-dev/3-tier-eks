@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: three-tier-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # 1. Point to your GitHub repository
+    repoURL: https://github.com/wegoagain-dev/3-tier-eks.git
+    # 2. Point to the folder containing your Kubernetes manifests
+    path: k8s
+    # 3. The branch to watch
+    targetRevision: main
+  destination:
+    # 4. Deploy to the same cluster ArgoCD is running in
+    server: https://kubernetes.default.svc
+    # 5. The namespace where your app should live
+    namespace: 3-tier-app-eks
+
+  # 6. Sync Policy (The "Magic")
+  syncPolicy:
+    automated:
+      prune: true # Delete resources in K8s if they are removed from Git
+      selfHeal: true # Fix resources in K8s if someone manually changes them
+    syncOptions:
+      - CreateNamespace=true # Automatically create the '3-tier-app-eks' namespace

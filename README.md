@@ -553,12 +553,121 @@ It may take a few minutes for the ALB to be provisioned and the DNS name to be a
 
 ***CHECK OUT THE VIDEO IN THE REPOSITORY FOR A DEMO***
 
+### Complete CI/CD using ArgoCD (GitOps)
+Implementing ArgoCD is a crucial step in ensuring that your application is continuously deployed and updated. ArgoCD provides a declarative way to manage your Kubernetes applications and ensures that they are always in the desired state. It helps us stop running `kubectl apply -f ...` if there are any changes in the configuration. It will watch our repositeory on push and sync changes automatically.
+
+First lets create a seperate namespace for ArgoCD
+```bash
+kubectl create namespace argocd
+```
+Next, we will get the ArgoCD manifests from their GitHub repository.
+```bash
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+![](/images/img-27.png)
+
+Now lets access the ArgoCD UI using port forwarding: (we can create a loadbalancer but its not needed right now)
+```bash
+kubectl port-forward svc/argocd-server -n argocd 9000:443
+```
+You may get a warning about the certificate being self-signed. This is expected as we are using a self-signed certificate for the ArgoCD server. You can ignore this warning and proceed to the UI by pressing advanced and proceed
+
+Now to sign in the username is `admin` and the password you can retrieve from 
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+```
+![](/images/img-28.png)
+
+Now we need to get ArgoCD to manage our application. We will use 'Application' as code rather than doing it manually on ArgoCD. We will use the `argocd-app.yaml` in our repository:
+
+```YAML
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: three-tier-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # 1. Point to your GitHub repository
+    repoURL: https://github.com/wegoagain-dev/3-tier-eks.git
+    # 2. Point to the folder containing your Kubernetes manifests
+    path: k8s
+    # 3. The branch to watch
+    targetRevision: main
+  destination:
+    # 4. Deploy to the same cluster ArgoCD is running in
+    server: https://kubernetes.default.svc
+    # 5. The namespace where your app should live
+    namespace: 3-tier-app-eks
+  
+  # 6. Sync Policy (The "Magic")
+  syncPolicy:
+    automated:
+      prune: true    # Delete resources in K8s if they are removed from Git
+      selfHeal: true # Fix resources in K8s if someone manually changes them
+    syncOptions:
+      - CreateNamespace=true # Automatically create the '3-tier-app-eks' namespace (useful if we didnt have it before)
+```
+
+Now lets apply using `kubectl apply -f argocd-app.yaml`
+
+
+
+
+---
+
+### Lets implement monitoring and logging for the application using tools like Prometheus, Grafana. This will help us monitor the application's performance and troubleshoot any issues that may arise.
+
+First lets seperate this by creating a new namespace for monitoring and logging.
+```bash
+kubectl create namespace monitoring
+```
+We will use helm to install Prometheus and Grafana.
+
+```bash
+# were just adding the chart repository and making sure its up to date
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+# this is what will install prometheus and grafana and a few other tools needed. installing it in the monitoring namespace, scrape all servicemonitors in cluster, and set password to access the grafana dashboard(in prod: itll ususally be a Kubernetes secret)
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+  --set grafana.adminPassword='admin123'
+```
+![](/images/img-23.png)
+
+Give it a bit of time then check pods are running using `kubectl get pods -n monitoring`
+
+![](/images/img-24.png)
+
+### Accessing Grafana Dashboard
+To access the Grafana dashboard, we first need to port-forward as the service is running private network within Kubernetes cluster. By default, it has no public IP address, so we can't just "visit" it from the internet:
+```
+kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+```
+Then open your browser and navigate to `http://localhost:3000`. You can login using the username `admin` and password `admin123`.
+
+![](/images/img-25.png)
+
+The best thing here is that there are preconfigured dashboards. Go to `Dashboard` and select the below as some examples:
+1. **"Kubernetes / Compute Resources / Namespace (Pods)"**
+   - Select namespace: `3-tier-app-eks`
+   - See your frontend & backend CPU/Memory usage
+
+2. **"Kubernetes / Compute Resources / Cluster"**
+   - Overall cluster health
+   - Shows you're monitoring like a pro
+
+3. **"Node Exporter / Nodes"**
+   - Detailed node metrics
+   - Disk, network, CPU per node
+
+![](/images/img-26.png)
+
+One of the next steps we can also do is expose the monitoring dashboard to the ALB so that we can access it from anywhere.
+
 ### Whats Next and how can we improve?
-In this project, we have successfully deployed a three-tier application on AWS EKS using Kubernetes. We have used Docker to containerisethe application and Github Actions and ECR to push the images to the ECR repository for Continuous Integration, Kubernetes to orchestrate the deployment, and AWS services like RDS for the database and ALB for load balancing.
-
-The next steps will be to implement monitoring and logging for the application using tools like Prometheus, Grafana. This will help us monitor the application's performance and troubleshoot any issues that may arise.
-
-Another future step will be to implement CI/'CD' for the application. This will allow us to automate the deployment process and ensure that the application is always up-to-date with the latest changes.
 
 We will also use Route53 to create a custom domain for the application and point it to the ALB. This will allow us to access the application using a custom domain name instead of the ALB DNS name.
 
