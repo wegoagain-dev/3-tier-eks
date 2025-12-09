@@ -17,11 +17,11 @@ I have a detailed guide on how to deploy this application on AWS EKS on my blog 
 
 
 ## 🏗 Architecture 
-![](./images/three-tier-eks.jpeg)
+![](./images/end-to-end-k8s.svg)
 
 
 ## CI/CD and GitOps Workflow
-![](./images/workflow.png)
+![](./images/workflow.svg)
 
 
 ## Screenshots
@@ -32,11 +32,24 @@ DevOps quiz app demo with quizzes with multiple choice questions.
 ArgoCD dashboard showing application status and logs.
 
 ![](./images/grafana.png)
-Grafana dashboard showing CPU usage and utilisation for the application.
+Grafana dashboard showing CPU/Memory usage and utilisation for the application.
 
 
-## How to Run Locally
+## How to Run Locally using Docker
+```bash
+# Clone the repository
+git clone https://github.com/wegoagain-dev/3-tier-eks.git
 
+# Navigate to the project directory
+cd 3-tier-eks
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm start
+```
+  
 
 ## What is coming next
 - Infrastructure as Code (IaC) for easier deployment and management of Kubernetes clusters.
