@@ -35,20 +35,74 @@ ArgoCD dashboard showing application status and logs.
 Grafana dashboard showing CPU/Memory usage and utilisation for the application.
 
 
-## How to Run Locally using Docker
+## 🚀 How to Run Locally
+
+### Option 1: Docker Compose
+The most efficient way to run the entire stack locally is using **Docker Compose**. This will start the database, run migrations, and launch both the backend and frontend.
+
 ```bash
 # Clone the repository
 git clone https://github.com/wegoagain-dev/3-tier-eks.git
-
-# Navigate to the project directory
 cd 3-tier-eks
 
-# Install dependencies
-npm install
-
-# Start the development server
-npm start
+# Start the entire stack
+docker compose up --build
 ```
+
+Once started:
+- **Frontend:** [http://localhost:8080](http://localhost:8080)
+- **Backend API:** [http://localhost:8000/api](http://localhost:8000/api)
+
+### Option 2: Kubernetes (Kind)
+You can also run the full Kubernetes stack locally using `kind`.
+
+1. **Create the Cluster:**
+   ```bash
+   kind create cluster
+   ```
+
+2. **Build Docker Images:**
+   ```bash
+   docker build -t 3-tier-eks-backend:latest ./backend
+   docker build -t 3-tier-eks-frontend:latest ./frontend
+   ```
+
+3. **Load Images into Kind:**
+   ```bash
+   kind load docker-image 3-tier-eks-backend:latest
+   kind load docker-image 3-tier-eks-frontend:latest
+   ```
+
+4. **Apply Manifests:**
+   ```bash
+   # Apply Namespace, Secrets, ConfigMaps, and Database
+   kubectl apply -f k8s-local/namespace.yaml
+   kubectl apply -f k8s-local/secrets.yaml
+   kubectl apply -f k8s-local/configmap.yaml
+   kubectl apply -f k8s-local/postgres.yaml
+   
+   # Wait for the database to be ready, then apply the rest
+   kubectl wait --namespace 3-tier-app-eks \
+     --for=condition=ready pod \
+     --selector=app=postgres \
+     --timeout=90s
+
+   kubectl apply -f k8s-local/
+   ```
+
+5. **Access the Application:**
+   Since we aren't using an Ingress Controller locally, use port-forwarding:
+
+   ```bash
+   # Frontend (Access at http://localhost:8080)
+   kubectl port-forward svc/frontend -n 3-tier-app-eks 8080:80 &
+
+   # Backend (Access at http://localhost:8000)
+   kubectl port-forward svc/backend -n 3-tier-app-eks 8000:8000 &
+   ```
+
+For manual development instructions (running without Docker), see the individual `README.md` files in the `frontend/` and `backend/` directories.
+
   
 
 ## What is coming next

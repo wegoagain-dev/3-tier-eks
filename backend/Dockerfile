@@ -19,11 +19,20 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Create a non-root user
+RUN adduser --disabled-password --gecos '' appuser
 
-# Ensure migrate.sh has Unix line endings
+# Copy application code and set ownership to appuser
+COPY --chown=appuser:appuser . .
+
+# Ensure migrate.sh is executable
 RUN chmod +x migrate.sh
+
+# Explicitly ownership of /app to allow writing migrations
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000

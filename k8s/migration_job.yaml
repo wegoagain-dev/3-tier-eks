@@ -14,19 +14,11 @@ spec:
 
           command: ["/bin/bash", "-c", "./migrate.sh"]
           env:
-            - name: DATABASE_URL
+            - name: FLASK_DEBUG
               valueFrom:
-                secretKeyRef:
-                  name: db-secrets
-                  key: DATABASE_URL
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: db-secrets
-                  key: SECRET_KEY
-
-            - name: FLASK_APP
-              value: "run.py"
+                configMapKeyRef:
+                  name: app-config
+                  key: FLASK_DEBUG
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
@@ -42,21 +34,21 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: DB_NAME
-            - name: FLASK_DEBUG
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: FLASK_DEBUG
-            - name: DB_USERNAME
+            - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: db-secrets
-                  key: DB_USERNAME
+                  key: DB_USER
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: db-secrets
                   key: DB_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: SECRET_KEY
           resources:
             requests:
               memory: "256Mi"

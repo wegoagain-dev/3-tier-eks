@@ -1,43 +1,19 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: backend
+  name: database-migration
   namespace: 3-tier-app-eks
-  labels:
-    app: backend
 spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: backend
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+  ttlSecondsAfterFinished: 100
   template:
-    metadata:
-      labels:
-        app: backend
     spec:
-      initContainers:
-        - name: wait-for-db
-          image: busybox
-          command:
-            [
-              "sh",
-              "-c",
-              "until nc -z -v -w30 postgres-db.3-tier-app-eks.svc.cluster.local 5432; do echo waiting for database; sleep 2; done;",
-            ]
       containers:
-        - name: backend
-          image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8000
+        - name: migration
+          image: 3-tier-eks-backend:latest
+          imagePullPolicy: IfNotPresent
+
+          command: ["/bin/bash", "-c", "./migrate.sh"]
           env:
-            - name: ALLOWED_ORIGINS
-              value: "*"
             - name: FLASK_DEBUG
               valueFrom:
                 configMapKeyRef:
@@ -80,16 +56,6 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-  namespace: 3-tier-app-eks
-spec:
-  selector:
-    app: backend
-  ports:
-    - port: 8000
-      targetPort: 8000
-  type: ClusterIP
+      restartPolicy: Never
+      activeDeadlineSeconds: 300
+  backoffLimit: 3

@@ -1,42 +1,29 @@
 import random
-
-from flask import jsonify, request
-
+from flask import jsonify, request, current_app
+from sqlalchemy import func
 from app.models import db
 from app.models.models import Question, Topic
-
 from . import quiz_bp
 
 MAX_QUIZ_QUESTIONS = 15
-
 
 @quiz_bp.route("/<topic_slug>", methods=["GET"])
 def get_quiz(topic_slug):
     topic = Topic.query.filter_by(slug=topic_slug).first_or_404()
 
-    # Get all questions for the topic
-    all_questions = Question.query.filter_by(topic_id=topic.id).all()
+    # Get random questions directly from the database
+    selected_questions = Question.query.filter_by(topic_id=topic.id)\
+        .order_by(func.random())\
+        .limit(MAX_QUIZ_QUESTIONS)\
+        .all()
 
-    if not all_questions:
-        return jsonify(
-            {
-                "title": topic.name,
-                "questions": [],
-                "total_questions": 0,
-                "selected_questions": 0,
-            }
-        )
-
-    # Shuffle and limit questions
-    selected_questions = random.sample(
-        all_questions, min(MAX_QUIZ_QUESTIONS, len(all_questions))
-    )
+    total_questions = Question.query.filter_by(topic_id=topic.id).count()
 
     return jsonify(
         {
             "title": topic.name,
             "questions": [q.to_dict(shuffle=False) for q in selected_questions],
-            "total_questions": len(all_questions),
+            "total_questions": total_questions,
             "selected_questions": len(selected_questions),
         }
     )
@@ -76,7 +63,7 @@ def submit_quiz():
 def manage_questions():
     if request.method == "POST":
         data = request.get_json()
-        print("Received question data:", data)
+        current_app.logger.info(f"Adding new question for topic: {data.get('topic_slug')}")
 
         if not all(
             k in data
@@ -102,7 +89,7 @@ def manage_questions():
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error adding question: {str(e)}")
+            current_app.logger.error(f"Error adding question: {str(e)}")
             return jsonify({"error": str(e)}), 400
 
     questions = Question.query.all()
@@ -223,9 +210,7 @@ def bulk_upload_questions():
             db.session.commit()
 
             # Build success message
-            message = (
-                f"Successfully added {success_count} questions. Failed: {failed_count}"
-            )
+            message = f"Successfully added {success_count} questions. Failed: {failed_count}"
             if created_topics:
                 message += f"\n\nAuto-created topics: {', '.join(set(created_topics))}"
 

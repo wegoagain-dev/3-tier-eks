@@ -23,7 +23,7 @@ fi
 
 echo "Checking if seed data is needed..."
 # Use a subshell to avoid exiting the script if psql fails when the table doesn't exist yet
-TABLE_EXISTS=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_NAME" -t -c "SELECT to_regclass('public.topics');")
+TABLE_EXISTS=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT to_regclass('public.topics');")
 
 if [ -z "$TABLE_EXISTS" ]; then
     # This case should not be hit if flask db upgrade worked, but as a safeguard
@@ -32,7 +32,7 @@ if [ -z "$TABLE_EXISTS" ]; then
 fi
 
 # Only run seed data if topics table is empty
-ROW_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM topics")
+ROW_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM topics")
 # The output from psql has leading whitespace, so we need to trim it.
 ROW_COUNT=$(echo $ROW_COUNT | xargs)
 

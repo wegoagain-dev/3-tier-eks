@@ -7,9 +7,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies and the missing tailwind forms plugin
+# Install dependencies
 RUN npm install
-RUN npm install @tailwindcss/forms
 
 # Copy source code
 COPY . .
@@ -23,8 +22,8 @@ FROM nginx:alpine
 # Copy built assets from build stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration template
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Expose port
 EXPOSE 80
