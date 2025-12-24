@@ -7,37 +7,33 @@ The app is a DevOps related quiz application where users can take quizzes on var
 
 I have a detailed guide on how to deploy this application on AWS EKS on my blog [here](https://wegoagain.dev/projects/end-to-end-eks-quiz).
 
-
 ## Key Features
-- Highly available EKS cluster distributed across multiple AZs.
-- ArgoCD GitOps pipeline for automated deployment.
-- Full CI/CD automation from code commit → container build → cluster deployment.
-- Integrated monitoring (Prometheus, Grafana) and security hardening (EKS Pod Identity, IAM least privilege).
-- External RDS for database storage in AWS.
-
+- **Infrastructure as Code (Terraform):** Fully automated infrastructure setup including RDS, OIDC, and Kubernetes resources.
+- **Highly Available EKS:** Distributed across multiple AZs.
+- **GitOps (ArgoCD):** Automated deployment pipeline.
+- **CI/CD (GitHub Actions):** Automated build and push to ECR.
+- **Observability:** Integrated Prometheus and Grafana.
+- **Security:** Secrets management, OIDC authentication, and IAM least privilege.
 
 ## 🏗 Architecture 
-![](./images/end-to-end-k8s.svg)
-
+![](./images/end-to-end-k8s.svg) 
 
 ## CI/CD and GitOps Workflow
-![](./images/workflow.svg)
-
+![](./images/workflow.svg) 
 
 ## Screenshots
-![](./images/demo-app.png)
+![](./images/demo-app.png) 
 DevOps quiz app demo with quizzes with multiple choice questions.
 
-![](./images/argo.png)
+![](./images/argo.png) 
 ArgoCD dashboard showing application status and logs.
 
-![](./images/grafana.png)
+![](./images/grafana.png) 
 Grafana dashboard showing CPU/Memory usage and utilisation for the application.
 
+## 🚀 How to Run
 
-## 🚀 How to Run Locally
-
-### Option 1: Docker Compose
+### Option 1: Run Locally (Docker Compose)
 The most efficient way to run the entire stack locally is using **Docker Compose**. This will start the database, run migrations, and launch both the backend and frontend.
 
 ```bash
@@ -53,7 +49,15 @@ Once started:
 - **Frontend:** [http://localhost:8080](http://localhost:8080)
 - **Backend API:** [http://localhost:8000/api](http://localhost:8000/api)
 
-### Option 2: Kubernetes (Kind)
+### Option 2: Deploy to AWS (Terraform & EKS)
+For the full production deployment on AWS, check out the detailed guide [here](https://wegoagain.dev/projects/end-to-end-eks-quiz).
+
+**Brief Summary:**
+1. Provision EKS Cluster with `eksctl`.
+2. Use **Terraform** (in `/terraform` folder) to create RDS, Namespace, Secrets, and Services.
+3. Deploy App manifests via `kubectl` or ArgoCD.
+
+### Option 3: Kubernetes (Kind)
 You can also run the full Kubernetes stack locally using `kind`.
 
 1. **Create the Cluster:**
@@ -101,10 +105,5 @@ You can also run the full Kubernetes stack locally using `kind`.
    kubectl port-forward svc/backend -n 3-tier-app-eks 8000:8000 &
    ```
 
-For manual development instructions (running without Docker), see the individual `README.md` files in the `frontend/` and `backend/` directories.
-
-  
-
 ## What is coming next
-- Infrastructure as Code (IaC) for easier deployment and management of Kubernetes clusters.
 - Route 53 for custom domain management.
