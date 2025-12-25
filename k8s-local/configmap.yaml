@@ -5,7 +5,7 @@ metadata:
   namespace: 3-tier-app-eks
 data:
   DB_HOST: "postgres-db.3-tier-app-eks.svc.cluster.local"
-  DB_NAME: "postgres"
+  DB_NAME: "devops_learning"
   DB_PORT: "5432"
   FLASK_DEBUG: "0"
   BACKEND_URL: "http://backend.3-tier-app-eks.svc.cluster.local:8000"
