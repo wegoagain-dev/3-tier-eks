@@ -91,6 +91,8 @@ jobs:
           python-version: "3.11"
       - name: install dependencies
         run: pip install -r requirements.txt
+      - name: run tests
+        run: pytest --tb=short -v
 
   backend-build-image:
     needs: backend-test

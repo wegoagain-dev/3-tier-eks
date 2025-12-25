@@ -15,7 +15,6 @@ resource "kubernetes_secret" "db_secrets" {
   data = {
     DB_USER     = "postgresadmin"
     DB_PASSWORD = random_password.db_password.result
-    SECRET_KEY  = "dev-secret-key"
   }
 
   type = "Opaque"

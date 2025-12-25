@@ -37,8 +37,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=devops_learning
-      - SECRET_KEY=dev-secret-key
-      - ALLOWED_ORIGINS=http://localhost:3000
+      - ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000
     depends_on:
       db:
         condition: service_healthy

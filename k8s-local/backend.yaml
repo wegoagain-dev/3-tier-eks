@@ -68,11 +68,6 @@ spec:
                 secretKeyRef:
                   name: db-secrets
                   key: DB_PASSWORD
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: db-secrets
-                  key: SECRET_KEY
           resources:
             requests:
               memory: "256Mi"
@@ -80,6 +75,24 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          # Readiness probe - checks if pod can serve traffic (includes DB check)
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Liveness probe - checks if app is alive (lightweight, no DB check)
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service

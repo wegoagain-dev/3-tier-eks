@@ -1,10 +1,12 @@
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
+    # Auto-generate a random key (Flask requires this, but we don't use sessions)
+    SECRET_KEY = secrets.token_hex(16)
     
     # Construct Database URL safely
     _db_user = os.getenv('DB_USER', 'postgres')

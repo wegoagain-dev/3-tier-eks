@@ -13,3 +13,6 @@ def api_health_check():
 
 # Import routes after creating blueprints
 from . import topic_routes, quiz_routes
+
+# Import health blueprint
+from .health_routes import health_bp

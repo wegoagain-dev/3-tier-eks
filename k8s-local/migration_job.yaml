@@ -44,11 +44,6 @@ spec:
                 secretKeyRef:
                   name: db-secrets
                   key: DB_PASSWORD
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: db-secrets
-                  key: SECRET_KEY
           resources:
             requests:
               memory: "256Mi"

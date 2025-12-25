@@ -1,8 +1,18 @@
-Flask==2.2.5
-Flask-CORS==4.0.0
-Flask-SQLAlchemy==3.0.2
-Flask-Migrate==4.0.4
-psycopg2==2.9.5
-python-dotenv==1.0.0
-sqlalchemy==1.4.46
-gunicorn==21.2.0
+# Core Flask dependencies
+Flask>=2.2.5
+Flask-CORS>=4.0.0
+Flask-SQLAlchemy>=3.0.2
+Flask-Migrate>=4.0.4
+
+# Database
+psycopg2-binary>=2.9.5
+SQLAlchemy>=1.4.46
+
+# Server
+gunicorn>=21.2.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.3

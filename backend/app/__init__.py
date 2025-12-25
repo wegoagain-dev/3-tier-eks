@@ -4,7 +4,7 @@ from flask_migrate import Migrate
 from .config import Config
 from .models import db
 from .models.models import Topic, Question
-from .routes import topic_bp, quiz_bp, api_bp 
+from .routes import topic_bp, quiz_bp, api_bp, health_bp
 import os
 
 migrate = Migrate()
@@ -32,5 +32,6 @@ def create_app(config_class=Config):
     # Register blueprints
     app.register_blueprint(topic_bp)
     app.register_blueprint(quiz_bp)
-    app.register_blueprint(api_bp) 
+    app.register_blueprint(api_bp)
+    app.register_blueprint(health_bp)
     return app
