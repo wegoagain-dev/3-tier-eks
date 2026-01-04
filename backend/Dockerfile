@@ -51,6 +51,10 @@ COPY --from=builder /install /usr/local
 # Set ownership to the non-root user in one step.
 COPY --chown=appuser:appuser . .
 
+# Ensure the /app directory has write permissions for appuser
+# This is needed for creating migrations directory
+RUN chmod -R 755 /app
+
 # Ensure that the migration scripts are executable.
 # Do this before switching to appuser so we have permissions.
 RUN chmod +x migrate.sh run_migrations.py
