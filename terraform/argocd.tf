@@ -14,7 +14,7 @@ resource "helm_release" "argocd" {
   chart            = "argo-cd"
   namespace        = "argocd"
   create_namespace = true
-  version          = var.argocd_chart_version
+  version          = "5.51.6"
 
 # Optimization: Use ClusterIP + Port Forwarding (Free & Secure)
   set {

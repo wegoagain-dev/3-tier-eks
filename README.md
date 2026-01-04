@@ -75,9 +75,9 @@ For the full production deployment on AWS, check out the detailed guide [here](h
    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
    
    # Port-forward
-   kubectl port-forward svc/argocd-server -n argocd 8080:443
+   kubectl port-forward svc/argocd-server -n argocd 9000:443
    ```
-   Open [https://localhost:8080](https://localhost:8080)
+   Open [https://localhost:9000](https://localhost:9000)
 
    **To Deploy Changes:**
    Just `git push`! ArgoCD watches the repo and updates the cluster automatically.
@@ -174,5 +174,55 @@ You can also run the full Kubernetes stack locally using `kind`.
 - Verify database is ready: `kubectl get pods -n 3-tier-app-eks -l app=postgres`
 - Check secrets: `kubectl get secret database-secret -n 3-tier-app-eks -o yaml`
 
+## Cleanup & Teardown
+
+> **⚠️ IMPORTANT**: Follow these steps to avoid unexpected AWS charges.
+
+### AWS Deployment Cleanup
+
+**Step 1: Delete Ingress (triggers ALB cleanup)**
+```bash
+kubectl delete ingress three-tier-ingress -n 3-tier-app-eks
+```
+Wait 1-2 minutes for the Load Balancer Controller to clean up the ALB.
+
+**Step 2: Destroy Terraform Resources**
+```bash
+cd terraform
+terraform destroy -auto-approve
+```
+
+**Step 3: Delete EKS Cluster**
+```bash
+eksctl delete cluster three-tier --region eu-west-2
+```
+
+**If ALB won't delete:**
+```bash
+# Find and delete ALB
+aws elbv2 describe-load-balancers --region eu-west-2 \
+  --query 'LoadBalancers[?contains(LoadBalancerName, `k8s-3tierapp`)].LoadBalancerArn' \
+  --output text | xargs -I {} aws elbv2 delete-load-balancer --load-balancer-arn {} --region eu-west-2
+
+# Delete target groups (after 10 seconds)
+aws elbv2 describe-target-groups --region eu-west-2 \
+  --query 'TargetGroups[?contains(TargetGroupName, `k8s-3tierapp`)].TargetGroupArn' \
+  --output text | xargs -I {} aws elbv2 delete-target-group --target-group-arn {} --region eu-west-2
+```
+
+### Local Cleanup
+
+**Docker Compose:**
+```bash
+docker compose down -v  # -v removes volumes
+```
+
+**Kind:**
+```bash
+kind delete cluster --name devops-lab
+```
+
 ## What's Coming Next
 - Route 53 for custom domain management
+- Network Policies for enhanced security
+
