@@ -51,9 +51,9 @@ COPY --from=builder /install /usr/local
 # Set ownership to the non-root user in one step.
 COPY --chown=appuser:appuser . .
 
-# Ensure the /app directory has write permissions for appuser
+# Ensure the /app directory is owned by appuser
 # This is needed for creating migrations directory
-RUN chmod -R 755 /app
+RUN chown -R appuser:appuser /app
 
 # Ensure that the migration scripts are executable.
 # Do this before switching to appuser so we have permissions.
