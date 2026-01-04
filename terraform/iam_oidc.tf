@@ -1,10 +1,3 @@
-# Variable for your GitHub Repo (e.g., "your-user/your-repo")
-variable "github_repo" {
-  description = "The GitHub repository path (e.g., 'wegoagain-dev/3-tier-eks')"
-  type        = string
-  default     = "wegoagain-dev/3-tier-eks" # Change this or pass via -var
-}
-
 # 1. Create OIDC Provider for GitHub Actions
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"

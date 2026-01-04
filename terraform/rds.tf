@@ -1,8 +1,4 @@
-# 1. Get EKS Cluster Details
-data "aws_eks_cluster" "cluster" {
-  name = "three-tier"
-}
-
+# 1. Get EKS Cluster VPC
 data "aws_vpc" "eks_vpc" {
   id = data.aws_eks_cluster.cluster.vpc_config[0].vpc_id
 }
@@ -22,12 +18,12 @@ data "aws_subnets" "private" {
 # 3. Get EKS Node Security Group
 data "aws_security_groups" "eks_nodes" {
   filter {
-    name   = "tag:aws:eks:cluster-name"
-    values = ["three-tier"]
-  }
-  filter {
     name   = "vpc-id"
     values = [data.aws_vpc.eks_vpc.id]
+  }  
+  filter {
+    name   = "tag:aws:eks:cluster-name"
+    values = [var.cluster_name]
   }
 }
 
@@ -75,12 +71,12 @@ resource "aws_db_instance" "default" {
   engine                 = "postgres"
   engine_version         = "15"
   instance_class         = "db.t3.micro"
-  db_name                = "threetierreactdb"
+  db_name                = "devops_learning"
   username               = "postgresadmin"
   password               = random_password.db_password.result
   skip_final_snapshot    = true
   db_subnet_group_name   = aws_db_subnet_group.default.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  multi_az               = true
-  apply_immediately      = true  # <--- FORCE PASSWORD UPDATE NOW
+  multi_az               = false # production turn on (jus to save cost)
+  apply_immediately      = true
 }

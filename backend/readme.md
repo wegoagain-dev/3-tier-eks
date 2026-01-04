@@ -10,7 +10,7 @@ A Flask-based REST API backend for the DevOps Learning Platform. This applicatio
 
 ## ⚙️ Configuration (Required)
 
-Before running the application, you must configure the environment variables.
+The application is configured using environment variables. It now uses a single `DATABASE_URL` to connect to the database.
 
 1.  **Copy the example file:**
     ```bash
@@ -18,8 +18,10 @@ Before running the application, you must configure the environment variables.
     ```
 
 2.  **Edit `.env`:**
-    *   **Local Python:** Set `DB_HOST=localhost`
-    *   **Local Docker:** Set `DB_HOST=host.docker.internal` (allows container to access host DB)
+    Update the `DATABASE_URL` in the `.env` file to point to your PostgreSQL instance. For a local setup, it would typically be:
+    ```
+    DATABASE_URL=postgresql://postgres:password@localhost:5432/devops_learning
+    ```
 
 ## 🚀 Quick Start (Local Python)
 
@@ -37,7 +39,7 @@ Before running the application, you must configure the environment variables.
 2.  **Setup Environment:**
     ```bash
     python3 -m venv venv
-    source venv/bin/activate  # Windows: venv\Scripts\activate
+    source venv/bin/activate
     pip install -r requirements.txt
     ```
 
@@ -60,7 +62,7 @@ Before running the application, you must configure the environment variables.
     ```
 
 2.  **Run the container:**
-    Ensure your `.env` has `DB_HOST=host.docker.internal`.
+    Make sure your `.env` file is up-to-date. The `DATABASE_URL` should be configured to connect to your database. If you are running Postgres on your host machine, you might need to use `host.docker.internal` as the hostname in your `DATABASE_URL`.
     ```bash
     docker run -d --name backend-run \
       -p 8000:8000 \

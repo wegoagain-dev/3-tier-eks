@@ -30,13 +30,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - FLASK_APP=run.py
-      - FLASK_DEBUG=1
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=devops_learning
+      - DATABASE_URL=postgresql://postgres:password@db:5432/devops_learning
       - ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000
     depends_on:
       db:
@@ -52,11 +46,7 @@ services:
     container_name: devops_migration
     command: ./migrate.sh
     environment:
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=devops_learning
+      - DATABASE_URL=postgresql://postgres:password@db:5432/devops_learning
     depends_on:
       db:
         condition: service_healthy

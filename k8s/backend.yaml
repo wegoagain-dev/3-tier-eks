@@ -10,16 +10,12 @@ spec:
   selector:
     matchLabels:
       app: backend
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: backend
     spec:
+      # Wait for DB networking to be ready before starting the App
       initContainers:
         - name: wait-for-db
           image: busybox
@@ -27,62 +23,22 @@ spec:
             [
               "sh",
               "-c",
-              "until nc -z -v -w30 postgres-db.3-tier-app-eks.svc.cluster.local 5432; do echo waiting for database; sleep 2; done;",
+              'until nc -z -v -w30 postgres-db 5432; do echo "waiting for DB.."; sleep 2; done;',
             ]
       containers:
         - name: backend
+          # Must match the 'kind load' name exactly
           image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:latest
-          imagePullPolicy: Always
+          imagePullPolicy: Always # Force use local image
           ports:
-            - containerPort: 8000
-          env:
-            - name: ALLOWED_ORIGINS
-              value: "*"
-            - name: FLASK_DEBUG
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: FLASK_DEBUG
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: DB_HOST
-            - name: DB_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: DB_PORT
-            - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: DB_NAME
-            - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: db-secrets
-                  key: DB_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: db-secrets
-                  key: DB_PASSWORD
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "100m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-          # Readiness probe - checks if pod can serve traffic (includes DB check)
+            - containerPort:
+                8000
+                # Readiness probe - checks if pod can serve traffic (includes DB check)
           readinessProbe:
             httpGet:
               path: /api/health/ready
               port: 8000
             initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
             failureThreshold: 3
           # Liveness probe - checks if app is alive (lightweight, no DB check)
           livenessProbe:
@@ -91,8 +47,26 @@ spec:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 20
-            timeoutSeconds: 3
-            failureThreshold: 3
+
+          command: ["python", "run.py"]
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: DATABASE_URL
+            - name: ALLOWED_ORIGINS
+              value: "*"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
 ---
 apiVersion: v1
 kind: Service

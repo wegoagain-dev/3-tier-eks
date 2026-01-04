@@ -1,8 +1,41 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv
+
+# Git
 .git
 .gitignore
-.env
-migrations/
+
+# Migrations (keep migrations/ folder but exclude cache)
+migrations/__pycache__/
+
+# Testing
 pytest_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Documentation
+*.md
+!readme.md
+
+# Logs
+*.log
+

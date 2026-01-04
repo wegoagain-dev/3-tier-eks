@@ -6,15 +6,15 @@ resource "kubernetes_namespace" "app" {
 }
 
 # 9. Create Kubernetes Secret (AUTOMATED)
-resource "kubernetes_secret" "db_secrets" {
+resource "kubernetes_secret" "database_secret" {
   metadata {
-    name      = "db-secrets"
+    name      = "database-secret"
     namespace = kubernetes_namespace.app.metadata[0].name
   }
 
   data = {
-    DB_USER     = "postgresadmin"
-    DB_PASSWORD = random_password.db_password.result
+    DATABASE_URL = "postgresql://${aws_db_instance.default.username}:${random_password.db_password.result}@${aws_db_instance.default.address}:${aws_db_instance.default.port}/${aws_db_instance.default.db_name}"
+    DB_PASSWORD  = random_password.db_password.result
   }
 
   type = "Opaque"
@@ -43,10 +43,7 @@ resource "kubernetes_config_map" "app_config" {
   }
 
   data = {
-    DB_HOST      = "postgres-db"
-    DB_NAME      = "threetierreactdb"
-    DB_PORT      = "5432"
-    FLASK_DEBUG  = "0"
-    BACKEND_URL  = "http://backend.3-tier-app-eks.svc.cluster.local:8000"
+    DB_NAME     = "devops_learning"
+    BACKEND_URL = "http://backend:8000"
   }
 }

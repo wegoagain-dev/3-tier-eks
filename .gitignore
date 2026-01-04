@@ -52,3 +52,5 @@ trust-policy.json
 *.tfstate.backup
 .terraform.lock.hcl
 *.tfvars
+.env.k8s
+k8s-local/secrets.yaml
