@@ -28,7 +28,7 @@ spec:
       containers:
         - name: backend
           # Must match the 'kind load' name exactly
-          image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:latest
+          image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:7af61130f95bddb8ad205f884b01f2865bffa70a
           imagePullPolicy: Always # Force use local image
           ports:
             - containerPort: 8000
