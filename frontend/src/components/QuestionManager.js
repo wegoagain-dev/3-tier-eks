@@ -47,7 +47,7 @@ function QuestionManager() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Question added successfully!' });
+        setMessage({ type: 'success', text: 'DATA_ENTRY_SUCCESSFUL' });
         setFormData({
           topic_slug: '',
           question_text: '',
@@ -55,10 +55,10 @@ function QuestionManager() {
           correct_answer: 0
         });
       } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to add question' });
+        setMessage({ type: 'error', text: data.error || 'DATA_ENTRY_FAILED' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error adding question' });
+      setMessage({ type: 'error', text: 'CONNECTION_ERROR' });
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ function QuestionManager() {
   const handleBulkUpload = async (e) => {
     e.preventDefault();
     if (!csvFile) {
-      setMessage({ type: 'error', text: 'Please select a CSV file' });
+      setMessage({ type: 'error', text: 'NO_FILE_SELECTED' });
       return;
     }
 
@@ -97,7 +97,7 @@ function QuestionManager() {
             }));
 
           if (questions.length === 0) {
-            setMessage({ type: 'error', text: 'No valid questions found in CSV file' });
+            setMessage({ type: 'error', text: 'INVALID_CSV_FORMAT' });
             setLoading(false);
             return;
           }
@@ -114,21 +114,21 @@ function QuestionManager() {
             if (response.ok) {
               setMessage({
                 type: 'success',
-                text: `Successfully added ${data.success} questions. Failed: ${data.failed}`
+                text: `BATCH_PROCESS_COMPLETE: ${data.success} SUCCESS / ${data.failed} FAILED`
               });
             } else {
-              setMessage({ type: 'error', text: `Upload failed: ${data.error}` });
+              setMessage({ type: 'error', text: `UPLOAD_FAILED: ${data.error}` });
             }
           } catch (error) {
-            setMessage({ type: 'error', text: 'Error uploading questions: ' + error.message });
+            setMessage({ type: 'error', text: 'UPLOAD_ERROR: ' + error.message });
           }
         },
         error: (error) => {
-          setMessage({ type: 'error', text: 'Error parsing CSV: ' + error.message });
+          setMessage({ type: 'error', text: 'CSV_PARSE_ERROR: ' + error.message });
         }
       });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error processing file: ' + error.message });
+      setMessage({ type: 'error', text: 'FILE_PROCESS_ERROR: ' + error.message });
     } finally {
       setLoading(false);
       setCsvFile(null);
@@ -137,89 +137,96 @@ function QuestionManager() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-12 max-w-6xl">
-      <div className="flex justify-between items-end mb-10">
+    <div className="container mx-auto px-6 py-24 max-w-6xl relative">
+       {/* Background Grid */}
+       <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
+
+      <div className="flex justify-between items-end mb-10 relative z-10">
         <div>
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Question Manager</h1>
-          <p className="text-gray-500 mt-2 text-lg">Curate your content database</p>
+          <div className="font-mono text-xs text-cyan mb-1">admin_panel</div>
+          <h1 className="text-4xl font-sans font-bold text-white tracking-tight">Question Manager</h1>
+          <p className="font-mono text-gray-500 text-xs mt-2">DATABASE_WRITE_ACCESS: GRANTED</p>
         </div>
         <button
           onClick={() => navigate('/')}
-          className="text-gray-600 hover:text-blue-600 font-medium transition-colors"
+          className="text-gray-500 hover:text-cyan font-mono text-xs uppercase tracking-wider transition-colors"
         >
-          &larr; Back to Dashboard
+          &larr; Return_Dashboard
         </button>
       </div>
 
       {message && (
-        <div className={`mb-8 p-4 rounded-xl shadow-sm border-l-4 flex items-center ${
-          message.type === 'success' ? 'bg-green-50 border-green-500 text-green-800' : 'bg-red-50 border-red-500 text-red-800'
+        <div className={`mb-8 p-4 border flex items-center relative z-10 ${
+          message.type === 'success' 
+            ? 'bg-green-500/10 border-green-500/50 text-green-400' 
+            : 'bg-red-500/10 border-red-500/50 text-red-400'
         }`}>
-          <span className="text-2xl mr-3">{message.type === 'success' ? '✅' : '⚠️'}</span>
-          <span className="font-medium whitespace-pre-wrap">{message.text}</span>
+          <span className="font-mono text-sm">{message.text}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 relative z-10">
         {/* Manual Entry Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-            <h2 className="text-xl font-bold text-white flex items-center">
-              <span className="bg-white/20 p-2 rounded-lg mr-3">✍️</span>
-              Manual Entry
-            </h2>
-          </div>
-          <div className="p-8">
+        <div className="glass-panel p-1">
+          <div className="bg-obsidian/80 p-6 h-full">
+            <div className="border-b border-slate pb-4 mb-6">
+              <h2 className="font-mono text-cyan text-sm uppercase tracking-wider">
+                 Manual_Entry_Protocol
+              </h2>
+            </div>
+            
             <form onSubmit={handleSingleSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Topic Slug</label>
+                <label className="block font-mono text-xs text-gray-500 mb-2 uppercase">Topic ID</label>
                 <input
                   type="text"
                   name="topic_slug"
                   value={formData.topic_slug}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
-                  placeholder="e.g. docker, kubernetes"
+                  className="w-full px-4 py-3 bg-charcoal border border-slate text-white focus:border-cyan focus:ring-1 focus:ring-cyan outline-none transition-all font-mono text-sm"
+                  placeholder="e.g. docker"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Question Text</label>
+                <label className="block font-mono text-xs text-gray-500 mb-2 uppercase">Query Text</label>
                 <textarea
                   name="question_text"
                   value={formData.question_text}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                  className="w-full px-4 py-3 bg-charcoal border border-slate text-white focus:border-cyan focus:ring-1 focus:ring-cyan outline-none transition-all font-sans"
                   rows="3"
-                  placeholder="What is the meaning of life?"
+                  placeholder="Enter question content..."
                   required
                 />
               </div>
 
               <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-700">Options</label>
+                <label className="block font-mono text-xs text-gray-500 uppercase">Variables (Options)</label>
                 {formData.options.map((option, index) => (
-                  <input
-                    key={index}
-                    type="text"
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none text-sm"
-                    placeholder={`Option ${index + 1}`}
-                    required
-                  />
+                  <div key={index} className="flex items-center">
+                    <span className="font-mono text-xs text-gray-600 mr-3 w-6">[{index}]</span>
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => handleOptionChange(index, e.target.value)}
+                      className="w-full px-4 py-2 bg-charcoal border border-slate text-white focus:border-cyan outline-none transition-all text-sm"
+                      placeholder={`Option value...`}
+                      required
+                    />
+                  </div>
                 ))}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Correct Answer Index</label>
-                <div className="flex space-x-4">
+                <label className="block font-mono text-xs text-gray-500 mb-2 uppercase">Correct Index</label>
+                <div className="flex space-x-2">
                   {[0, 1, 2, 3].map((val) => (
-                    <label key={val} className={`flex-1 text-center py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                    <label key={val} className={`flex-1 text-center py-2 border cursor-pointer transition-all font-mono text-xs ${
                       parseInt(formData.correct_answer) === val 
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 font-bold' 
-                        : 'border-gray-200 text-gray-500 hover:border-blue-200'
+                        ? 'border-cyan bg-cyan/10 text-cyan' 
+                        : 'border-slate text-gray-600 hover:border-gray-500'
                     }`}>
                       <input
                         type="radio"
@@ -238,25 +245,25 @@ function QuestionManager() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transform active:scale-95 transition-all shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full bg-cyan text-black font-bold font-mono text-sm py-3 hover:bg-white hover:shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Processing...' : 'Add Question'}
+                {loading ? 'PROCESSING...' : 'INITIATE_UPLOAD'}
               </button>
             </form>
           </div>
         </div>
 
         {/* Bulk Upload Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden h-fit">
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-8 py-6">
-            <h2 className="text-xl font-bold text-white flex items-center">
-              <span className="bg-white/20 p-2 rounded-lg mr-3">📂</span>
-              Bulk Upload
-            </h2>
-          </div>
-          <div className="p-8">
+        <div className="glass-panel p-1 h-fit">
+           <div className="bg-obsidian/80 p-6">
+            <div className="border-b border-slate pb-4 mb-6">
+              <h2 className="font-mono text-green-500 text-sm uppercase tracking-wider">
+                 Bulk_Upload_Protocol
+              </h2>
+            </div>
+
             <form onSubmit={handleBulkUpload} className="space-y-6">
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors">
+              <div className="border border-dashed border-slate hover:border-green-500/50 rounded p-8 text-center transition-colors group cursor-pointer">
                 <input
                   type="file"
                   accept=".csv"
@@ -266,25 +273,18 @@ function QuestionManager() {
                   required
                 />
                 <label htmlFor="csv-upload" className="cursor-pointer block">
-                  <div className="text-4xl mb-3">📄</div>
-                  <p className="font-medium text-gray-700">
-                    {csvFile ? csvFile.name : 'Click to upload CSV'}
+                  <div className="font-mono text-2xl mb-2 group-hover:scale-110 transition-transform">📄</div>
+                  <p className="font-mono text-xs text-gray-400 group-hover:text-green-500 transition-colors">
+                    {csvFile ? csvFile.name : 'SELECT_SOURCE_FILE'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-2">.csv files only</p>
                 </label>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Required CSV Format</h3>
+              <div className="bg-charcoal p-4 border border-slate">
+                <h3 className="font-mono text-[10px] text-gray-500 mb-2 uppercase tracking-wider">Schema Requirement</h3>
                 <div className="overflow-x-auto">
-                  <code className="text-xs bg-white p-3 rounded border border-gray-200 block whitespace-pre text-gray-600">
+                  <code className="font-mono text-[10px] text-gray-400 block whitespace-pre">
                     topic_slug,question_text,option1,option2,option3,option4,correct_answer
-                  </code>
-                </div>
-                <div className="mt-3 text-xs text-gray-500">
-                  <p className="mb-1">Example:</p>
-                  <code className="text-emerald-700">
-                    docker,What is a container?,VM,Process,App,Box,1
                   </code>
                 </div>
               </div>
@@ -292,9 +292,9 @@ function QuestionManager() {
               <button
                 type="submit"
                 disabled={loading || !csvFile}
-                className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transform active:scale-95 transition-all shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full bg-slate border border-green-500/30 text-green-500 font-bold font-mono text-sm py-3 hover:bg-green-500 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Uploading...' : 'Upload CSV'}
+                {loading ? 'UPLOADING...' : 'EXECUTE_BATCH'}
               </button>
             </form>
           </div>

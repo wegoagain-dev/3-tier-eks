@@ -1,4 +1,4 @@
-# Production Grade Three-Tier App on AWS EKS (EC2, RDS, ECR, ALB, IAM, Route53), GitOps (ArgoCD), Prometheus, Grafana, Github Actions
+# Production Grade Three-Tier App on AWS EKS including RDS, GitOps (ArgoCD), Prometheus, Grafana, Github Actions
 
 ## Overview
 This project deploys a three-tier application on AWS EKS using a highly available, production-grade architecture spanning multiple availability zones. The application consists of a React frontend, Flask backend and a RDS PostgreSQL database. It demonstrates end-to-end DevOps practices with containerisation, CI/CD automation, and GitOps deployment with ArgoCD.
@@ -15,20 +15,20 @@ I have a detailed guide on how to deploy this application on AWS EKS on my blog 
 - **Observability:** Integrated Prometheus and Grafana.
 - **Security:** Secrets management, OIDC authentication, and IAM least privilege.
 
-## Architecture 
-![](./images/end-to-end-k8s.svg) 
+## Architecture
+![](./images/end-to-end-k8s.svg)
 
 ## CI/CD and GitOps Workflow
-![](./images/workflow.svg) 
+![](./images/workflow.svg)
 
 ## Screenshots
-![](./images/demo-app.png) 
+![](./images/demo-app.png)
 DevOps quiz app demo with quizzes with multiple choice questions.
 
-![](./images/argo.png) 
+![](./images/argo.png)
 ArgoCD dashboard showing application status and logs.
 
-![](./images/grafana.png) 
+![](./images/grafana.png)
 Grafana dashboard showing CPU/Memory usage and utilisation for the application.
 
 ## How to Run
@@ -42,7 +42,7 @@ git clone https://github.com/wegoagain-dev/3-tier-eks.git
 cd 3-tier-eks
 
 # Start the entire stack
-docker compose up --build
+docker compose up --build -d
 ```
 
 Once started:
@@ -68,12 +68,12 @@ For the full production deployment on AWS, check out the detailed guide [here](h
 
 3. **Automatic Deployment**:
    ArgoCD will automatically sync the `k8s/` directory to your cluster.
-   
+
    **Access ArgoCD UI:**
    ```bash
    # Get password
    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
-   
+
    # Port-forward
    kubectl port-forward svc/argocd-server -n argocd 9000:443
    ```
@@ -87,49 +87,30 @@ You can also run the full Kubernetes stack locally using `kind`.
 
 1. **Create the Cluster:**
    ```bash
-   kind create cluster --name devops-lab --config kind-config.yaml
+   kind create cluster --name three-tier --config kind-config.yaml
    ```
 
 2. **Build Container Images:**
-   
+
    **Using Docker:**
    ```bash
    docker build -t 3-tier-eks-backend:latest ./backend
    docker build -t 3-tier-eks-frontend:latest ./frontend
    ```
-   
-   **Using Podman:**
-   ```bash
-   podman build -t 3-tier-eks-backend:latest ./backend
-   podman build -t 3-tier-eks-frontend:latest ./frontend
-   ```
 
 3. **Load Images into Kind:**
-   
+
    **Using Docker:**
    ```bash
-   kind load docker-image 3-tier-eks-backend:latest --name devops-lab
-   kind load docker-image 3-tier-eks-frontend:latest --name devops-lab
-   ```
-   
-   **Using Podman:**
-   ```bash
-   # Tag images for kind
-   podman tag localhost/3-tier-eks-backend:latest 3-tier-eks-backend:latest
-   podman tag localhost/3-tier-eks-frontend:latest 3-tier-eks-frontend:latest
-   
-   # Save and load into kind
-   podman save -o /tmp/backend.tar localhost/3-tier-eks-backend:latest
-   podman save -o /tmp/frontend.tar localhost/3-tier-eks-frontend:latest
-   kind load image-archive /tmp/backend.tar --name devops-lab
-   kind load image-archive /tmp/frontend.tar --name devops-lab
+   kind load docker-image 3-tier-eks-backend:latest --name three-tier
+   kind load docker-image 3-tier-eks-frontend:latest --name three-tier
    ```
 
 4. **Create Secrets:**
    ```bash
    # Copy the example file and update if needed
    cp .env.k8s.example .env.k8s
-   
+
    # Create the secret from the env file
    kubectl create secret generic database-secret \
      --from-env-file=.env.k8s \
@@ -142,7 +123,7 @@ You can also run the full Kubernetes stack locally using `kind`.
    kubectl apply -f k8s-local/namespace.yaml
    kubectl apply -f k8s-local/configmap.yaml
    kubectl apply -f k8s-local/postgres.yaml
-   
+
    # Wait for the database to be ready, then apply the rest
    kubectl wait --namespace 3-tier-app-eks \
      --for=condition=ready pod \
@@ -165,16 +146,12 @@ You can also run the full Kubernetes stack locally using `kind`.
 
 ## Troubleshooting
 
-### Kind + Podman Issues
-- **Image not found**: Make sure to use the `localhost/` prefix when tagging images with podman
-- **Permission denied**: Run podman commands without sudo, or configure podman for rootless mode
-
 ### Migration Job Failures
-- Check logs: `kubectl logs -n 3-tier-app-eks -l job-name=database-migration`
+- Check logs: `kubectl logs -f database-migration-<name>> -n 3-tier-app-eks`
 - Verify database is ready: `kubectl get pods -n 3-tier-app-eks -l app=postgres`
 - Check secrets: `kubectl get secret database-secret -n 3-tier-app-eks -o yaml`
 
-## Cleanup & Teardown
+## Cleanup & Teardown (AWS)
 
 > **⚠️ IMPORTANT**: Follow these steps to avoid unexpected AWS charges.
 
@@ -197,19 +174,6 @@ terraform destroy -auto-approve
 eksctl delete cluster three-tier --region eu-west-2
 ```
 
-**If ALB won't delete:**
-```bash
-# Find and delete ALB
-aws elbv2 describe-load-balancers --region eu-west-2 \
-  --query 'LoadBalancers[?contains(LoadBalancerName, `k8s-3tierapp`)].LoadBalancerArn' \
-  --output text | xargs -I {} aws elbv2 delete-load-balancer --load-balancer-arn {} --region eu-west-2
-
-# Delete target groups (after 10 seconds)
-aws elbv2 describe-target-groups --region eu-west-2 \
-  --query 'TargetGroups[?contains(TargetGroupName, `k8s-3tierapp`)].TargetGroupArn' \
-  --output text | xargs -I {} aws elbv2 delete-target-group --target-group-arn {} --region eu-west-2
-```
-
 ### Local Cleanup
 
 **Docker Compose:**
@@ -219,10 +183,9 @@ docker compose down -v  # -v removes volumes
 
 **Kind:**
 ```bash
-kind delete cluster --name devops-lab
+kind delete cluster --name three-tier
 ```
 
-## What's Coming Next
+## Improvements Coming Next
 - Route 53 for custom domain management
 - Network Policies for enhanced security
-

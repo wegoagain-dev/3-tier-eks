@@ -15,8 +15,6 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internet-facing
     # 2. Route traffic directly to Pod IPs (Faster & required for Fargate)
     alb.ingress.kubernetes.io/target-type: ip
-    # 3. (Optional) Explicit health check path if your apps don't respond to '/'
-    # alb.ingress.kubernetes.io/healthcheck-path: /
 spec:
   ingressClassName: alb
   rules:

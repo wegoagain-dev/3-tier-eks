@@ -6,17 +6,17 @@ metadata:
 spec:
   project: default
   source:
-    # 1. Point to your GitHub repository
+    # 1. Point to GitHub repository
     repoURL: https://github.com/wegoagain-dev/3-tier-eks.git
     # 2. The branch to watch
     targetRevision: main
-    # 3. Point to the folder containing your Kubernetes manifests
+    # 3. Point to the folder containing Kubernetes manifests
     path: k8s
-    
+
   destination:
     # 4. Deploy to the same cluster ArgoCD is running in
     server: https://kubernetes.default.svc
-    # 5. The namespace where your app should live
+    # 5. The namespace where app should live
     namespace: 3-tier-app-eks
 
   # 6. Sync Policy (The "Magic")

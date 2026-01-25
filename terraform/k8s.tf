@@ -1,41 +1,13 @@
-# 8. Create Namespace
+# Create Namespace
 resource "kubernetes_namespace" "app" {
   metadata {
     name = "3-tier-app-eks"
   }
+
+  depends_on = [module.eks]
 }
 
-# 9. Create Kubernetes Secret (AUTOMATED)
-resource "kubernetes_secret" "database_secret" {
-  metadata {
-    name      = "database-secret"
-    namespace = kubernetes_namespace.app.metadata[0].name
-  }
-
-  data = {
-    DATABASE_URL = "postgresql://${aws_db_instance.default.username}:${random_password.db_password.result}@${aws_db_instance.default.address}:${aws_db_instance.default.port}/${aws_db_instance.default.db_name}"
-    DB_PASSWORD  = random_password.db_password.result
-  }
-
-  type = "Opaque"
-}
-
-# 10. Create ExternalName Service (AUTOMATED)
-resource "kubernetes_service" "postgres_db" {
-  metadata {
-    name      = "postgres-db"
-    namespace = kubernetes_namespace.app.metadata[0].name
-  }
-  spec {
-    type          = "ExternalName"
-    external_name = aws_db_instance.default.address
-    port {
-      port = 5432
-    }
-  }
-}
-
-# 11. Create ConfigMap (AUTOMATED)
+# Create ConfigMap (AUTOMATED)
 resource "kubernetes_config_map" "app_config" {
   metadata {
     name      = "app-config"
@@ -43,7 +15,35 @@ resource "kubernetes_config_map" "app_config" {
   }
 
   data = {
-    DB_NAME     = "devops_learning"
     BACKEND_URL = "http://backend:8000"
+  }
+}
+
+# Create Kubernetes Secret (AUTOMATED)
+resource "kubernetes_secret" "database_secret" {
+  metadata {
+    name      = "database-secret"
+    namespace = kubernetes_namespace.app.metadata[0].name
+  }
+
+  data = {
+    DATABASE_URL = aws_secretsmanager_secret_version.db_string_version.secret_string
+  }
+
+  type = "Opaque"
+}
+
+# Create ExternalName Service (AUTOMATED) # acts as a DNS bridge between Kubernetes cluster and the external AWS RDS database.
+resource "kubernetes_service" "postgres_db" {
+  metadata {
+    name      = "postgres-db"
+    namespace = kubernetes_namespace.app.metadata[0].name
+  }
+  spec {
+    type          = "ExternalName"
+    external_name = aws_db_instance.db.address
+    port {
+      port = 5432
+    }
   }
 }

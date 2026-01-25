@@ -16,7 +16,10 @@ resource "helm_release" "argocd" {
   create_namespace = true
   version          = "5.51.6"
 
-# Optimization: Use ClusterIP + Port Forwarding (Free & Secure)
+  depends_on = [module.eks]
+
+  # Optimization: Use ClusterIP + Port Forwarding (Free & Secure)
+  # use kubectl port-forward svc/argocd-server -n argocd 8080:443
   set {
     name  = "server.service.type"
     value = "ClusterIP"

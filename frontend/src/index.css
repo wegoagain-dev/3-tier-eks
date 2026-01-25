@@ -1,3 +1,65 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-obsidian text-gray-300 font-sans antialiased overflow-x-hidden;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-charcoal;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate rounded hover:bg-cyan transition-colors duration-300;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-cyan text-obsidian;
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  }
+  
+  .border-glow {
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.2), inset 0 0 10px rgba(0, 243, 255, 0.1);
+  }
+
+  .bg-grid {
+    background-size: 40px 40px;
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+  }
+
+  /* Glass effect for panels */
+  .glass-panel {
+    @apply bg-charcoal/80 backdrop-blur-md border border-slate;
+  }
+}
+
+/* Scanline Effect - Subtle */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.3;
+}

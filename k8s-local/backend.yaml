@@ -6,7 +6,7 @@ metadata:
   labels:
     app: backend
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: backend
@@ -28,9 +28,10 @@ spec:
       containers:
         - name: backend
           # Must match the 'kind load' name exactly
-          image: localhost/3-tier-eks-backend:latest
-          imagePullPolicy: Never # Force use local image
-                # Readiness probe - checks if pod can serve traffic (includes DB check)
+          image: 3-tier-eks-backend:latest
+          imagePullPolicy:
+            Never # Force use local image
+            # Readiness probe - checks if pod can serve traffic (includes DB check)
           readinessProbe:
             httpGet:
               path: /api/health/ready
@@ -44,8 +45,6 @@ spec:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 20
-
-          command: ["python", "run.py"]
           ports:
             - containerPort: 8000
           env:

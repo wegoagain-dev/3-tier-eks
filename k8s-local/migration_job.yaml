@@ -21,7 +21,7 @@ spec:
             ]
       containers:
         - name: migration
-          image: localhost/3-tier-eks-backend:latest
+          image: 3-tier-eks-backend:latest
           imagePullPolicy: Never
           command: ["/bin/bash", "-c", "./migrate.sh"]
 

@@ -8,13 +8,15 @@ import QuestionManager from './components/QuestionManager';
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-obsidian text-gray-300 font-sans selection:bg-cyan selection:text-black">
         <Navbar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/quiz/:topic" element={<Quiz />} />
-          <Route path="/manage-questions" element={<QuestionManager />} />
-        </Routes>
+        <main className="relative z-0">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/quiz/:topic" element={<Quiz />} />
+            <Route path="/manage-questions" element={<QuestionManager />} />
+          </Routes>
+        </main>
       </div>
     </Router>
   );

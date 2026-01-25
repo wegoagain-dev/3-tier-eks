@@ -3,7 +3,7 @@ services:
   # Database Service (PostgreSQL)
   # ---------------------------------------------------------------------------
   db:
-    image: postgres:14-alpine
+    image: postgres:16-alpine
     container_name: devops_db
     environment:
       - POSTGRES_USER=postgres

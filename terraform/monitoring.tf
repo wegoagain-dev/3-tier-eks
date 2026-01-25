@@ -6,11 +6,7 @@ resource "helm_release" "kube_prometheus_stack" {
   create_namespace = true
   version          = "56.6.2"
 
-  # Allow Prometheus to discover all ServiceMonitors across namespaces
-  set {
-    name  = "prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues"
-    value = "false"
-  }
+  depends_on = [module.eks]
 
   # Set Grafana admin password
   set {
@@ -18,15 +14,16 @@ resource "helm_release" "kube_prometheus_stack" {
     value = "admin123"
   }
 
+  # if not service type 'LoadBalancer' would have to use CLI port-forwarding to see the dashboard. command kubectl get svc -n monitoring
+  # if service tpye 'ClusterIP' use kubectl port-forward svc/prometheus-grafana -n monitoring 8080:80
+  set {
+    name  = "grafana.service.type"
+    value = "ClusterIP"
+  }
+
   # Optional: Persist Grafana dashboards and data
   set {
     name  = "grafana.persistence.enabled"
     value = "false"
-  }
-
-  # Optional: Persist Prometheus data
-  set {
-    name  = "prometheus.prometheusSpec.retention"
-    value = "7d"
   }
 }
