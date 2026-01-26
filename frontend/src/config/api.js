@@ -1,6 +1,5 @@
-// Check if running inside Kubernetes cluster
-const isKubernetes = process.env.KUBERNETES_SERVICE_HOST !== undefined;
-// Use /api when in Kubernetes, otherwise use localhost for local dev
-const API_URL = isKubernetes ? '/api' : 'http://localhost:8000/api';
+// Use REACT_APP_API_URL if set, otherwise default to /api for production
+// For local development, set REACT_APP_API_URL=http://localhost:8000/api
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 export default API_URL;
