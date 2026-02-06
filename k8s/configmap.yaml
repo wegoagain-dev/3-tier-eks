@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: 3-tier-app-eks
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  BACKEND_URL: "http://backend:8000"

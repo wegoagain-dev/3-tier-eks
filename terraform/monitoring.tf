@@ -11,7 +11,7 @@ resource "helm_release" "kube_prometheus_stack" {
   # Set Grafana admin password
   set {
     name  = "grafana.adminPassword"
-    value = "admin123"
+    value = "admin123" # In production, use a secure password and consider using Kubernetes secrets to manage sensitive information.
   }
 
   # if not service type 'LoadBalancer' would have to use CLI port-forwarding to see the dashboard. command kubectl get svc -n monitoring

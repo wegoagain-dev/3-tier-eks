@@ -3,6 +3,8 @@ kind: Job
 metadata:
   name: database-migration
   namespace: 3-tier-app-eks
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   # Auto-delete job 5 minutes after finishing | try 3 times on failure
   ttlSecondsAfterFinished: 300
@@ -17,8 +19,14 @@ spec:
             [
               "sh",
               "-c",
-              'until nc -z -v -w30 postgres-db 5432; do echo "Waiting for DB..."; sleep 2; done;',
+              'until nc -z -v -w30 $RDS_ENDPOINT 5432; do echo "Waiting for DB..."; sleep 2; done;',
             ]
+          env:
+            - name: RDS_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: rds-endpoint-secret
+                  key: RDS_ENDPOINT
       containers:
         - name: migration
           image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:latest

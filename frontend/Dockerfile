@@ -19,14 +19,30 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# Create non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# Change ownership of nginx directories (including conf.d for template processing)
+RUN chown -R appuser:appgroup /usr/share/nginx/html && \
+    chown -R appuser:appgroup /var/cache/nginx && \
+    chown -R appuser:appgroup /var/log/nginx && \
+    chown -R appuser:appgroup /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R appuser:appgroup /var/run/nginx.pid
+
+
 # Copy built assets from build stage
-COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=build --chown=appuser:appgroup /app/build /usr/share/nginx/html
 
 # Copy nginx configuration template
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY --chown=appuser:appgroup nginx.conf.template /etc/nginx/templates/default.conf.template
 
-# Expose port
-EXPOSE 80
+# Use non-privileged port (80 requires root)
+EXPOSE 8080
+
+# Switch to non-root user
+USER appuser
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

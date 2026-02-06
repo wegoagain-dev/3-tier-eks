@@ -22,7 +22,7 @@ React-based frontend for the DevOps Learning Platform.
    docker build -t frontend-app .
 
 2. Run:
-   docker run -p 3000:80 -e BACKEND_URL="http://host.docker.internal:8000" frontend-app
+   docker run -p 3000:8080 -e BACKEND_URL="http://host.docker.internal:8000" frontend-app
 
 ## Building for Production
 

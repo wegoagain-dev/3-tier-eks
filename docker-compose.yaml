@@ -31,7 +31,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/devops_learning
-      - ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000
+      - ALLOWED_ORIGINS="*"
     depends_on:
       db:
         condition: service_healthy
@@ -60,7 +60,7 @@ services:
     build: ./frontend
     container_name: devops_frontend
     ports:
-      - "8080:80"
+      - "80:8080"
     environment:
       # Internal Docker DNS: connecting to 'backend' service on port 8000
       - BACKEND_URL=http://backend:8000

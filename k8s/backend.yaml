@@ -23,8 +23,14 @@ spec:
             [
               "sh",
               "-c",
-              'until nc -z -v -w30 postgres-db 5432; do echo "waiting for DB.."; sleep 2; done;',
+              'until nc -z -v -w30 $RDS_ENDPOINT 5432; do echo "waiting for DB.."; sleep 2; done;',
             ]
+          env:
+            - name: RDS_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: rds-endpoint-secret
+                  key: RDS_ENDPOINT
       containers:
         - name: backend
           # Must match the 'kind load' name exactly

@@ -42,11 +42,21 @@ resource "random_password" "password" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 # create secrets manager
-resource "aws_secretsmanager_secret" "db_string" {
-  name = var.secret_manager_name_db
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name                    = var.secret_manager_name_db
+  recovery_window_in_days = 0 # For dev, allows immediate delete. Use 7-30 for production.
 }
-# store db  in secrets manager
-resource "aws_secretsmanager_secret_version" "db_string_version" {
-  secret_id     = aws_secretsmanager_secret.db_string.id
-  secret_string = "postgresql://${var.db_username}:${random_password.password.result}@${aws_db_instance.db.address}:5432/${var.db_name}"
+
+# store db credentials in secrets manager as JSON with multiple keys
+# This allows External Secrets Operator to fetch individual values
+resource "aws_secretsmanager_secret_version" "db_credentials_version" {
+  secret_id = aws_secretsmanager_secret.db_credentials.id
+  secret_string = jsonencode({
+    DATABASE_URL = "postgresql://${var.db_username}:${random_password.password.result}@${aws_db_instance.db.address}:5432/${var.db_name}"
+    RDS_ENDPOINT = aws_db_instance.db.address
+    RDS_PORT     = "5432"
+    DB_NAME      = var.db_name
+    DB_USERNAME  = var.db_username
+    DB_PASSWORD  = random_password.password.result
+  })
 }

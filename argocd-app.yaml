@@ -25,4 +25,4 @@ spec:
       prune: true # Delete resources in K8s if they are removed from Git
       selfHeal: true # Fix resources in K8s if someone manually changes them
     syncOptions:
-      - CreateNamespace=false # Do not create the namespace, it already exists
+      - CreateNamespace=true # Create namespace if it doesn't exist
