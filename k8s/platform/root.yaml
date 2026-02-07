@@ -12,6 +12,7 @@
 
 ---
 # Platform Tools Application (deploys first)
+# This creates the 3 platform tool Applications (ALB, ESO, Prometheus)
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
