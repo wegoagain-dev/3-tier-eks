@@ -33,7 +33,7 @@ spec:
                   key: RDS_ENDPOINT
       containers:
         - name: backend
-          image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:ad4da6799e6eaae0f3afdf76610854cbdb41e2c8
+          image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:e38c04f5396c4f11bd5871e246fe7d88e0d9413c
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
