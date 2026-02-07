@@ -4,10 +4,12 @@ metadata:
   name: database-migration
   namespace: 3-tier-app-eks
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
+    # Run as PostSync hook - executes after all other resources are synced
+    # Deletes after success so it doesn't keep recreating
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
-  # Auto-delete job 5 minutes after finishing | try 3 times on failure
-  ttlSecondsAfterFinished: 300
+  # try 3 times on failure
   backoffLimit: 3
 
   template:
