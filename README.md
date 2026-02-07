@@ -1,8 +1,23 @@
-# 3-Tier EKS Application
+# 3-Tier EKS Microservices Application
 
-A production-grade three-tier application (React frontend, Flask backend, PostgreSQL database) deployed on AWS EKS using Terraform and GitOps with ArgoCD.
+A production grade three-tier application (React frontend, Flask backend, PostgreSQL database) deployed on AWS EKS using Terraform and GitOps with ArgoCD.
 
-[Detailed Blog Post](https://wegoagain.dev/blog/3-tier-eks-microservices)
+Highly recommend to check out this [Detailed Blog Post](https://wegoagain.dev/blog/3-tier-eks-microservices)
+
+## Architecture
+
+![](./images/eks-devopsquiz.png)
+
+### CI/CD Workflow
+
+![](./images/workflow.svg)
+
+**Key Features:**
+- **Infrastructure**: VPC (3-tier subnets), EKS (managed node groups), RDS
+- **GitOps**: ArgoCD with App of Apps pattern and sync waves
+- **Security**: OIDC (GitHub Actions), IRSA (pod IAM), External Secrets Operator
+- **CI/CD**: GitHub Actions → ECR → ArgoCD auto-sync
+- **Monitoring**: Prometheus/Grafana
 
 ## Quick Start
 
@@ -51,20 +66,19 @@ kubectl port-forward svc/argocd-server -n argocd 9000:443
 # Open https://localhost:9000
 ```
 
+### Screenshots
+
+**ArgoCD Dashboard:**
+
+![](./images/argo.png)
+
+**Grafana Monitoring:**
+
+![](./images/grafana.png)
+
 ### Deploy Changes
 
 Just `git push`! GitHub Actions builds images, updates manifests, and ArgoCD syncs automatically.
-
-## Architecture
-
-![](./images/eks-devopsquiz.png)
-
-**Key Features:**
-- **Infrastructure**: VPC (3-tier subnets), EKS (managed node groups), RDS
-- **GitOps**: ArgoCD with App of Apps pattern and sync waves
-- **Security**: OIDC (GitHub Actions), IRSA (pod IAM), External Secrets Operator
-- **CI/CD**: GitHub Actions → ECR → ArgoCD auto-sync
-- **Monitoring**: Prometheus/Grafana
 
 ## Project Structure
 
@@ -121,6 +135,12 @@ cd terraform && terraform destroy
 - **IRSA**: Pods assume IAM roles via OIDC - no node-level permissions
 - **External Secrets**: AWS Secrets Manager → Kubernetes, no secrets in Git/state
 - **Separate concerns**: Terraform = infrastructure, kubectl = bootstrap, ArgoCD = everything else
+
+## Demo
+
+Watch the application in action:
+
+https://github.com/user-attachments/assets/video-app.mov
 
 ## Roadmap
 
