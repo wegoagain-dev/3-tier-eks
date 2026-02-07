@@ -140,7 +140,8 @@ cd terraform && terraform destroy
 
 Watch the application in action:
 
-https://github.com/user-attachments/assets/video-app.mov
+https://github.com/user-attachments/assets/8ec1ffd6-e2f9-4d94-b160-5418d6afbc03
+
 
 ## Roadmap
 
