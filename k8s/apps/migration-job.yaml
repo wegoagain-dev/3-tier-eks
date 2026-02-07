@@ -31,7 +31,7 @@ spec:
                   key: RDS_ENDPOINT
       containers:
         - name: migration
-          image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:e38c04f5396c4f11bd5871e246fe7d88e0d9413c
+          image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:5a8149e5f4b1a99172d831dad6b980ca3e9656f2
           imagePullPolicy: Always
           command: ["/bin/bash", "-c", "./migrate.sh"]
 
