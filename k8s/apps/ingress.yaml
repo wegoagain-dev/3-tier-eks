@@ -13,7 +13,7 @@ metadata:
   annotations:
     # 1. Make the Load Balancer public
     alb.ingress.kubernetes.io/scheme: internet-facing
-    # 2. Route traffic directly to Pod IPs (Faster & required for Fargate)
+    # 2. Route traffic directly to Pod IPs
     alb.ingress.kubernetes.io/target-type: ip
 spec:
   ingressClassName: alb

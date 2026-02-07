@@ -84,7 +84,7 @@ jobs:
         run: |
           docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG
 
-      # --- GITOPS UPDATE (The "Deployment" Step) --- (revise)
+      # --- GITOPS UPDATE (The "Deployment" Step) ---
       - name: Update Kubernetes Manifests
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -93,19 +93,19 @@ jobs:
           # This updates the 'image:' line in YAML files to the new tag
 
           # Update Frontend Manifest
-          sed -i "s|image: .*$ECR_REPOSITORY_FRONTEND:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG|g" k8s/frontend.yaml
+          sed -i "s|image: .*$ECR_REPOSITORY_FRONTEND:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG|g" k8s/apps/frontend.yaml
 
           # Update Backend Manifest
-          sed -i "s|image: .*$ECR_REPOSITORY_BACKEND:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG|g" k8s/backend.yaml
+          sed -i "s|image: .*$ECR_REPOSITORY_BACKEND:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG|g" k8s/apps/backend.yaml
 
           # Update Migration Job Manifest
-          sed -i "s|image: .*$ECR_REPOSITORY_BACKEND:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG|g" k8s/migration_job.yaml
+          sed -i "s|image: .*$ECR_REPOSITORY_BACKEND:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG|g" k8s/apps/migration-job.yaml
 
           # Check if there are changes
           if [[ `git status --porcelain` ]]; then
             git config --global user.email "github-actions@github.com"
             git config --global user.name "GitHub Actions"
-            git add k8s/frontend.yaml k8s/backend.yaml k8s/migration_job.yaml
+            git add k8s/apps/frontend.yaml k8s/apps/backend.yaml k8s/apps/migration-job.yaml
             git commit -m "Update image tags to $IMAGE_TAG"
             git push
           else

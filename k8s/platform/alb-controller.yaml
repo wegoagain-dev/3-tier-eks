@@ -1,0 +1,47 @@
+# AWS Load Balancer Controller
+# 
+# This Application installs the ALB Controller which creates AWS Load Balancers
+# when you create Kubernetes Ingress resources.
+#
+# IRSA Flow:
+# 1. Terraform creates IAM role (terraform/lb_controller.tf)
+# 2. This Application creates ServiceAccount with role annotation
+# 3. When pod starts, EKS injects AWS credentials via OIDC
+# 4. Pod can now create/manage ALBs in AWS
+#
+# The annotation links the ServiceAccount to the IAM role:
+# eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT:role/ROLE_NAME
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-load-balancer-controller
+  namespace: argocd
+  annotations:
+    # Deploy before application ingress (which needs ALB)
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://aws.github.io/eks-charts
+    chart: aws-load-balancer-controller
+    targetRevision: 3.0.0
+    helm:
+      values: |
+        clusterName: devops-quiz
+        serviceAccount:
+          create: true
+          name: aws-load-balancer-controller
+          annotations:
+            # Links ServiceAccount to IAM role created by Terraform
+            # This is the IRSA magic - pod gets AWS permissions via this annotation
+            eks.amazonaws.com/role-arn: arn:aws:iam::373317459404:role/AmazonEKSLoadBalancerControllerRole
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

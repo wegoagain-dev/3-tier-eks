@@ -4,7 +4,6 @@
 # What it does:
 # - Creates 'argocd' namespace
 # - Installs ArgoCD server, repo-server, and application-controller
-# - Exposes ArgoCD UI via LoadBalancer for easy access
 #
 # Learning: Helm is a package manager for Kubernetes (like apt/yum for Linux)
 
@@ -14,7 +13,7 @@ resource "helm_release" "argocd" {
   chart            = "argo-cd"
   namespace        = "argocd"
   create_namespace = true
-  version          = "5.51.6"
+  version          = "9.4.0" # pinning to a specific version for stability
 
   depends_on = [module.eks]
 
@@ -30,3 +29,11 @@ resource "helm_release" "argocd" {
     value = "false"
   }
 }
+
+# Platform Root Application (Manual Bootstrap)
+#
+# After running `terraform apply`, bootstrap the App of Apps pattern with:
+#   kubectl apply -f ../k8s/platform/root.yaml
+#
+# This creates the root Application that manages all platform tools (ALB, ESO, Prometheus)
+# via GitOps. Keeping this manual keeps Terraform simple and focused on infrastructure.

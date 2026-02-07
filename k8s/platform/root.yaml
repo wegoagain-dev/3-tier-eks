@@ -1,0 +1,80 @@
+# Root Application (App of Apps Pattern)
+#
+# This Application manages EVERYTHING via GitOps:
+# 1. Platform tools (ALB Controller, External Secrets Operator, Prometheus)
+# 2. Application workloads (3-tier quiz app)
+#
+# Sync waves ensure platform tools are healthy BEFORE apps deploy:
+# - Wave -1: Platform tools (ALB, ESO, Prometheus) deploy first
+# - Wave 0: Application workloads deploy after platform is ready
+#
+# Bootstrap with: kubectl apply -f k8s/platform/root.yaml
+
+---
+# Platform Tools Application (deploys first)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-tools
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"  # Deploy before apps
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/wegoagain-dev/3-tier-eks.git
+    targetRevision: main
+    path: k8s/platform
+    directory:
+      recurse: false
+      exclude: 'root.yaml'  # Don't include this file recursively
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+
+---
+# Application Workloads (deploys after platform is healthy)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 3-tier-app
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"  # Deploy after platform tools
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/wegoagain-dev/3-tier-eks.git
+    targetRevision: main
+    path: k8s/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: 3-tier-app-eks
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

@@ -33,9 +33,8 @@ spec:
                   key: RDS_ENDPOINT
       containers:
         - name: backend
-          # Must match the 'kind load' name exactly
           image: 373317459404.dkr.ecr.eu-west-2.amazonaws.com/3-tier-eks-backend:0fac7ae2d09ecb624080237ef38773425f993d36
-          imagePullPolicy: Always # Force use local image
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
               # Readiness probe - checks if pod can serve traffic (includes DB check)
