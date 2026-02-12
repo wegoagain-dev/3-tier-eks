@@ -54,3 +54,5 @@ trust-policy.json
 *.tfvars
 .env.k8s
 k8s-local/secrets.yaml
+.DS_Store
+.DS_Store
